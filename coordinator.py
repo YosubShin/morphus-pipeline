@@ -23,7 +23,7 @@ default_active_cluster_size = int(config.get('experiment', 'default_active_clust
 default_num_threads = int(config.get('experiment', 'default_num_threads'))
 default_num_records = int(config.get('experiment', 'default_num_records'))
 default_workload_type = config.get('experiment', 'default_workload_type')
-default_no_reconfiguration = bool(config.get('experiment', 'default_no_reconfiguration'))
+default_no_reconfiguration = (config.get('experiment', 'default_no_reconfiguration') == 'True')
 default_replication_factor = int(config.get('experiment', 'default_replication_factor'))
 
 

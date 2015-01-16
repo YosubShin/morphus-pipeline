@@ -2,9 +2,27 @@ import os
 import time
 import pandas as pd
 import ConfigParser
+from twilio.rest import TwilioRestClient
 
 config = ConfigParser.SafeConfigParser()
 config.read('config.ini')
+
+private_config = ConfigParser.SafeConfigParser()
+private_config.read('private.ini')
+tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))
+
+wokload_types = ['uniform', 'zipfian', 'latest', 'readonly']
+local_result_path = config.get('path', 'local_result_path')
+local_raw_result_path = local_result_path + '/raw'
+local_processed_result_path = local_result_path + '/processed'
+
+default_cluster_size = int(config.get('experiment', 'default_cluster_size'))
+default_active_cluster_size = int(config.get('experiment', 'default_active_cluster_size'))
+default_num_threads = int(config.get('experiment', 'default_num_threads'))
+default_num_records = int(config.get('experiment', 'default_num_records'))
+default_workload_type = config.get('experiment', 'default_workload_type')
+default_no_reconfiguration = (config.get('experiment', 'default_no_reconfiguration') == 'True')
+default_replication_factor = int(config.get('experiment', 'default_replication_factor'))
 
 
 def merge_csvs(dir_, output_file_name):
@@ -27,8 +45,13 @@ def merge_csvs(dir_, output_file_name):
 
 
 def plot_num_nodes_vs_reconfig_time(df, output_dir):
-    df = df[(df['num_records'] == 1)]
-    print df.shape
+    print df.desc()
+    df = df[(df['num_records'] == default_num_records) &
+            (df['is_reconfigured'] == str(not default_no_reconfiguration)) &
+            (df['num_threads'] == default_num_threads) &
+            # (df['replication_factor'] == 1) &
+            (df['workload_type'] == str(default_workload_type))]
+    print df
 
 
 def main():
