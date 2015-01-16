@@ -38,11 +38,12 @@ def run_experiment(cluster_size, active_cluster_size, num_threads, num_records, 
         out = subprocess.check_output(('ssh yossupp@node-0.cassandra-morphous.ISS.emulab.net \'cat %s/result.ini\'' % base_directory_path), shell=True)
         buf = StringIO.StringIO(out)
         config.readfp(buf)
-        assert config.has_option('result', 'morphousStartAt')
-        assert config.has_option('result', 'CompactMorphousTask')
-        assert config.has_option('result', 'InsertMorphousTask')
-        assert config.has_option('result', 'AtomicSwitchMorphousTask')
-        assert config.has_option('result', 'CatchupMorphousTask')
+        if not no_reconfiguration:
+            assert config.has_option('result', 'morphousStartAt')
+            assert config.has_option('result', 'CompactMorphousTask')
+            assert config.has_option('result', 'InsertMorphousTask')
+            assert config.has_option('result', 'AtomicSwitchMorphousTask')
+            assert config.has_option('result', 'CatchupMorphousTask')
     finally:
         os.system('ssh yossupp@node-0.cassandra-morphous.ISS.emulab.net \'cp -r /var/log/cassandra %s/logs\'' % base_directory_path)
         result = dict(config.items('result'))
@@ -62,16 +63,16 @@ def run_experiment(cluster_size, active_cluster_size, num_threads, num_records, 
 default_cluster_size = 15
 default_active_cluster_size = 10
 default_num_threads = 1
-default_num_records = 1000
+default_num_records = 1000000
 default_workload_type = 'uniform'
 default_no_reconfiguration = False
 default_replication_factor = 1
 
-# Throughput on different workloads
-def experiment_on_workloads():
-    csv_file_name = '%s/%s-workloads.csv' % (local_processed_result_path, strftime('%m-%d-%H%M'))
-    rows = []
-    for run in range(3):
+
+# Throughput on different workloads changing workloads
+def experiment_on_workloads(csv_file_name, repeat):
+    for run in range(repeat):
+        # Different workloads under reconfiguration
         for workload_type in wokload_types:
             result = run_experiment(cluster_size=default_cluster_size,
                                     active_cluster_size=default_active_cluster_size,
@@ -80,13 +81,104 @@ def experiment_on_workloads():
                                     workload_type=workload_type,
                                     no_reconfiguration=default_no_reconfiguration,
                                     replication_factor=default_replication_factor)
-            rows.append(result)
-            df = pd.DataFrame(rows)
-            df.to_csv(csv_file_name)
+            append_row_to_csv(csv_file_name, result)
+        # workload under no reconfiguration
+        result = run_experiment(cluster_size=default_cluster_size,
+                                active_cluster_size=default_active_cluster_size,
+                                num_threads=default_num_threads,
+                                num_records=default_num_records,
+                                workload_type=default_workload_type,
+                                no_reconfiguration=True,
+                                replication_factor=default_replication_factor)
+        append_row_to_csv(csv_file_name, result)
 
-try:
-    experiment_on_workloads()
-except Exception, e:
+
+# Scalability on different number of machines.
+# Don't do any operation(by setting number of YCSB thread to be 0)
+def experiment_on_num_nodes(csv_file_name, repeat):
+    num_nodes = [1, 5, 10, 15]
+    for run in range(repeat):
+        for num_node in num_nodes:
+            result = run_experiment(cluster_size=default_cluster_size,
+                                    active_cluster_size=num_node,
+                                    num_threads=0,
+                                    num_records=default_num_records,
+                                    workload_type=default_workload_type,
+                                    no_reconfiguration=default_no_reconfiguration,
+                                    replication_factor=default_replication_factor)
+            append_row_to_csv(csv_file_name, result)
+
+
+def experiment_on_replication_factor(csv_file_name, repeat):
+    replication_factors = [2, 3, 4]
+    for run in range(repeat):
+        for replication_factor in replication_factors:
+            result = run_experiment(cluster_size=default_cluster_size,
+                                    active_cluster_size=default_active_cluster_size,
+                                    num_threads=default_num_threads,
+                                    num_records=default_num_records,
+                                    workload_type=default_workload_type,
+                                    no_reconfiguration=default_no_reconfiguration,
+                                    replication_factor=replication_factor)
+            append_row_to_csv(csv_file_name, result)
+
+
+def experiment_on_num_threads(csv_file_name, repeat):
+    num_threads = [2, 3, 4]
+    for run in range(repeat):
+        for num_thread in num_threads:
+            result = run_experiment(cluster_size=default_cluster_size,
+                                    active_cluster_size=default_active_cluster_size,
+                                    num_threads=num_thread,
+                                    num_records=default_num_records,
+                                    workload_type=default_workload_type,
+                                    no_reconfiguration=default_no_reconfiguration,
+                                    replication_factor=default_replication_factor)
+            append_row_to_csv(csv_file_name, result)
+
+
+def experiment_on_num_records(csv_file_name, repeat):
+    num_records = [100000, 3000000, 5000000, 10000000]
+    for run in range(repeat):
+        for num_record in num_records:
+            result = run_experiment(cluster_size=default_cluster_size,
+                                    active_cluster_size=default_active_cluster_size,
+                                    num_threads=default_num_threads,
+                                    num_records=num_record,
+                                    workload_type=default_workload_type,
+                                    no_reconfiguration=default_no_reconfiguration,
+                                    replication_factor=default_replication_factor)
+            append_row_to_csv(csv_file_name, result)
+
+
+def append_row_to_csv(csv_file_name, row):
+    df = pd.DataFrame([row])
+    if os.path.isfile(csv_file_name):
+        with open(csv_file_name, 'a') as f:
+            df.to_csv(f, header=False)
+    else:
+        df.to_csv(csv_file_name)
+
+
+def main():
+    try:
+        csv_file_name = '%s/%s.csv' % (local_processed_result_path, strftime('%m-%d-%H%M'))
+        repeat = 2
+
+        # experiment_on_workloads(csv_file_name, repeat)
+        # experiment_on_num_nodes(csv_file_name, repeat)
+        experiment_on_replication_factor(csv_file_name, repeat)
+        experiment_on_num_threads(csv_file_name, repeat)
+        experiment_on_num_records(csv_file_name, repeat)
+
+    except Exception, e:
+        tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
+                           to=private_config.get('personal', 'phone_number'),
+                           body='Exp. failed w/:\n%s' % str(e))
+        raise
     tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
                        to=private_config.get('personal', 'phone_number'),
-                       body='Exp. failed w/:\n%s' % str(e))
+                       body='Experiment done!')
+
+if __name__ == "__main__":
+    main()

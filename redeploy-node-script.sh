@@ -5,6 +5,8 @@
 
 CASSANDRA_SRC_DIR_NAME=apache-cassandra-2.0.8-src-0713
 CASSANDRA_HOME=/opt/cassandra
+CASSANDRA_DATA_HOME=/mnt/extra/cassandra-data
+CASSANDRA_LOG_HOME=/var/log/cassandra
 
 if [ $# -lt 4 ]
 then
@@ -51,23 +53,23 @@ then
     if [ "$MODE" == "hard" ]
     then
         echo "## Removing and then creating directories for Apache Cassandra"
-        sudo rm -rf /var/lib/cassandra
-        sudo rm -rf /var/log/cassandra
-        sudo mkdir --mode=777 /var/lib/cassandra
-        sudo mkdir --mode=777 /var/lib/cassandra/data
-        sudo mkdir --mode=777 /var/lib/cassandra/commitlog
-        sudo mkdir --mode=777 /var/lib/cassandra/saved_caches
-        sudo mkdir --mode=777 /var/log/cassandra
+        sudo rm -rf ${CASSANDRA_DATA_HOME}
+        sudo rm -rf ${CASSANDRA_LOG_HOME}
+        sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}
+        sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/data
+        sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/commitlog
+        sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/saved_caches
+        sudo mkdir --mode=777 ${CASSANDRA_LOG_HOME}
     fi
 
     sudo rm -rf $CASSANDRA_HOME
 else
     echo "## Creating directories for Cassandra's data & log"
-    sudo mkdir --mode=777 /var/lib/cassandra
-    sudo mkdir --mode=777 /var/lib/cassandra/data
-    sudo mkdir --mode=777 /var/lib/cassandra/commitlog
-    sudo mkdir --mode=777 /var/lib/cassandra/saved_caches
-    sudo mkdir --mode=777 /var/log/cassandra
+    sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}
+    sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/data
+    sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/commitlog
+    sudo mkdir --mode=777 ${CASSANDRA_DATA_HOME}/saved_caches
+    sudo mkdir --mode=777 ${CASSANDRA_LOG_HOME}
 fi
 
 echo "## Copying Cassandra to local machine"
@@ -172,10 +174,10 @@ partitioner: org.apache.cassandra.dht.Murmur3Partitioner
 # will spread data evenly across them, subject to the granularity of
 # the configured compaction strategy.
 data_file_directories:
-    - /var/lib/cassandra/data
+    - ${CASSANDRA_DATA_HOME}/data
 
 # commit log
-commitlog_directory: /var/lib/cassandra/commitlog
+commitlog_directory: ${CASSANDRA_DATA_HOME}/commitlog
 
 # policy for data disk failures:
 # stop_paranoid: shut down gossip and Thrift even for single-sstable errors.
@@ -259,7 +261,7 @@ row_cache_save_period: 0
 # memory_allocator: NativeAllocator
 
 # saved caches
-saved_caches_directory: /var/lib/cassandra/saved_caches
+saved_caches_directory: ${CASSANDRA_DATA_HOME}/saved_caches
 
 # commitlog_sync may be either "periodic" or "batch." 
 # When in batch mode, Cassandra won't ack writes until the commit log

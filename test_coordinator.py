@@ -2,6 +2,8 @@ from unittest import TestCase
 import pandas as pd
 import ConfigParser
 from twilio.rest import TwilioRestClient
+import coordinator
+import os
 
 __author__ = 'Daniel'
 
@@ -45,3 +47,19 @@ class Test_coordinator(TestCase):
                                 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n'\
                                 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n'\
                                 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n')
+
+    def test_append_to_csv(self):
+        csv_file_name = '/tmp/test_csv.csv'
+        if os.path.isfile(csv_file_name):
+            os.remove(csv_file_name)
+        for i in range(10):
+            row_dict = {'base_directory_name': 'name%d' % i,
+                   'CompactMorphousTask': str(i),
+                   'InsertMorphousTask': str(i),
+                   'AtomicSwitchMorphousTask': str(i),
+                   'CatchupMorphousTask': str(i)}
+            coordinator.append_row_to_csv(csv_file_name, row_dict)
+            read_df = pd.read_csv(csv_file_name)
+            assert read_df.shape[0] == i + 1
+
+        print read_df

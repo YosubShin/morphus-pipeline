@@ -7,7 +7,7 @@
 # 2014-08-26 Yosub       Fix minor bugs
 # 2015-01-09 Yosub       Overhaul upon update of Emulab cluster
 
-if [ $# -lt 4 ]
+if [ $# -lt 3 ]
 then
     echo $"Usage: $0 --basedir=<base directory> --cluster_size=<cluster size> --node_address=<node address>"
     exit 2
