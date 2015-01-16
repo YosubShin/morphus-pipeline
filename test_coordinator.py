@@ -28,13 +28,13 @@ class Test_coordinator(TestCase):
 
     def test_private_config_parser(self):
         private_config = ConfigParser.SafeConfigParser()
-        private_config.read('private.ini')
+        private_config.read('config.ini')
         print private_config.get('twilio', 'account_sid')
         print private_config.get('twilio', 'auth_token')
 
     def test_twilio_sms(self):
         private_config = ConfigParser.SafeConfigParser()
-        private_config.read('private.ini')
+        private_config.read('config.ini')
         print private_config.get('twilio', 'account_sid')
         print private_config.get('twilio', 'auth_token')
         tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))

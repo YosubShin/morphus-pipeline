@@ -7,12 +7,12 @@ import traceback
 import pandas as pd
 from twilio.rest import TwilioRestClient
 
-private_config = ConfigParser.SafeConfigParser()
-private_config.read('private.ini')
-tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))
+config = ConfigParser.SafeConfigParser()
+config.read('config.ini')
+tc = TwilioRestClient(config.get('twilio', 'account_sid'), config.get('twilio', 'auth_token'))
 
 wokload_types = ['uniform', 'zipfian', 'latest', 'readonly']
-local_result_path = '/Users/Daniel/Dropbox/Illinois/research/experiment'
+local_result_path = config.get('path', 'local_result_path')
 local_raw_result_path = local_result_path + '/raw'
 local_processed_result_path = local_result_path + '/processed'
 
@@ -172,12 +172,12 @@ def main():
         experiment_on_num_records(csv_file_name, repeat)
 
     except Exception, e:
-        tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
-                           to=private_config.get('personal', 'phone_number'),
+        tc.messages.create(from_=config.get('personal', 'twilio_number'),
+                           to=config.get('personal', 'phone_number'),
                            body='Exp. failed w/:\n%s' % str(e))
         raise
-    tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
-                       to=private_config.get('personal', 'phone_number'),
+    tc.messages.create(from_=config.get('personal', 'twilio_number'),
+                       to=config.get('personal', 'phone_number'),
                        body='Experiment done!')
 
 if __name__ == "__main__":
