@@ -3,18 +3,28 @@ from time import strftime
 import subprocess
 import ConfigParser
 import StringIO
-import traceback
 import pandas as pd
 from twilio.rest import TwilioRestClient
 
 config = ConfigParser.SafeConfigParser()
 config.read('config.ini')
-tc = TwilioRestClient(config.get('twilio', 'account_sid'), config.get('twilio', 'auth_token'))
+
+private_config = ConfigParser.SafeConfigParser()
+private_config.read('private.ini')
+tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))
 
 wokload_types = ['uniform', 'zipfian', 'latest', 'readonly']
 local_result_path = config.get('path', 'local_result_path')
 local_raw_result_path = local_result_path + '/raw'
 local_processed_result_path = local_result_path + '/processed'
+
+default_cluster_size = int(config.get('experiment', 'default_cluster_size'))
+default_active_cluster_size = int(config.get('experiment', 'default_active_cluster_size'))
+default_num_threads = int(config.get('experiment', 'default_num_threads'))
+default_num_records = int(config.get('experiment', 'default_num_records'))
+default_workload_type = config.get('experiment', 'default_workload_type')
+default_no_reconfiguration = bool(config.get('experiment', 'default_no_reconfiguration'))
+default_replication_factor = int(config.get('experiment', 'default_replication_factor'))
 
 
 def run_experiment(cluster_size, active_cluster_size, num_threads, num_records, workload_type, no_reconfiguration, replication_factor):
@@ -33,20 +43,26 @@ def run_experiment(cluster_size, active_cluster_size, num_threads, num_records, 
     if ret != 0:
         raise Exception('Unable to finish morphous-script-1.0-SNAPSHOT-jar-with-dependencies.jar')
 
-    config = ConfigParser.ConfigParser()
+    result_ini = ConfigParser.ConfigParser()
     try:
         out = subprocess.check_output(('ssh yossupp@node-0.cassandra-morphous.ISS.emulab.net \'cat %s/result.ini\'' % base_directory_path), shell=True)
         buf = StringIO.StringIO(out)
-        config.readfp(buf)
+        result_ini.readfp(buf)
         if not no_reconfiguration:
-            assert config.has_option('result', 'morphousStartAt')
-            assert config.has_option('result', 'CompactMorphousTask')
-            assert config.has_option('result', 'InsertMorphousTask')
-            assert config.has_option('result', 'AtomicSwitchMorphousTask')
-            assert config.has_option('result', 'CatchupMorphousTask')
+            assert result_ini.has_option('result', 'morphousStartAt')
+            assert result_ini.has_option('result', 'CompactMorphousTask')
+            assert result_ini.has_option('result', 'InsertMorphousTask')
+            assert result_ini.has_option('result', 'AtomicSwitchMorphousTask')
+            assert result_ini.has_option('result', 'CatchupMorphousTask')
     finally:
         os.system('ssh yossupp@node-0.cassandra-morphous.ISS.emulab.net \'cp -r /var/log/cassandra %s/logs\'' % base_directory_path)
-        result = dict(config.items('result'))
+        result = dict(result_ini.items('result'))
+        if no_reconfiguration:
+            result['morphousStartAt'] = ''
+            result['CompactMorphousTask'] = ''
+            result['InsertMorphousTask'] = ''
+            result['AtomicSwitchMorphousTask'] = ''
+            result['CatchupMorphousTask'] = ''
         os.system('ssh yossupp@node-0.cassandra-morphous.ISS.emulab.net \'tar -czf %s.tgz -C %s %s \'' % (base_directory_path, '/tmp', base_directory_name))
         os.system('scp yossupp@node-0.cassandra-morphous.ISS.emulab.net:%s.tgz %s/' % (base_directory_path, local_raw_result_path))
         os.system('tar -xzf %s/%s.tgz -C %s/' % (local_raw_result_path, base_directory_name, local_raw_result_path))
@@ -59,14 +75,6 @@ def run_experiment(cluster_size, active_cluster_size, num_threads, num_records, 
     result['is_reconfigured'] = str(not no_reconfiguration)
     result['replication_factor'] = replication_factor
     return result
-
-default_cluster_size = 15
-default_active_cluster_size = 10
-default_num_threads = 1
-default_num_records = 1000000
-default_workload_type = 'uniform'
-default_no_reconfiguration = False
-default_replication_factor = 1
 
 
 # Throughput on different workloads changing workloads
@@ -172,12 +180,12 @@ def main():
         experiment_on_num_records(csv_file_name, repeat)
 
     except Exception, e:
-        tc.messages.create(from_=config.get('personal', 'twilio_number'),
-                           to=config.get('personal', 'phone_number'),
+        tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
+                           to=private_config.get('personal', 'phone_number'),
                            body='Exp. failed w/:\n%s' % str(e))
         raise
-    tc.messages.create(from_=config.get('personal', 'twilio_number'),
-                       to=config.get('personal', 'phone_number'),
+    tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
+                       to=private_config.get('personal', 'phone_number'),
                        body='Experiment done!')
 
 if __name__ == "__main__":
