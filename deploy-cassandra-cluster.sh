@@ -48,6 +48,8 @@ REMOTE_REDEPLOY_SCRIPT=${REMOTE_SCRIPT_DIR}/redeploy-node-script.sh
 
 echo "## Deploying Cassandra cluster with mode: " ${MODE}
 
+sudo pkill -f morphous-script
+
 # Set JAVA_HOME to build with Ant
 export JAVA_HOME=/usr/lib/jvm/jdk1.7.0
 

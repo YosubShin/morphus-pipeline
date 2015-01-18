@@ -171,11 +171,11 @@ def append_row_to_csv(csv_file_name, row):
 def main():
     try:
         csv_file_name = '%s/%s.csv' % (local_processed_result_path, strftime('%m-%d-%H%M'))
-        repeat = 2
+        repeat = int(config.get('experiment', 'repeat'))
 
         # experiment_on_workloads(csv_file_name, repeat)
         # experiment_on_num_nodes(csv_file_name, repeat)
-        experiment_on_replication_factor(csv_file_name, repeat)
+        # experiment_on_replication_factor(csv_file_name, repeat)
         experiment_on_num_threads(csv_file_name, repeat)
         experiment_on_num_records(csv_file_name, repeat)
 
