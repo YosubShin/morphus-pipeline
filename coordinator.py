@@ -104,7 +104,7 @@ def experiment_on_workloads(csv_file_name, repeat):
 # Scalability on different number of machines.
 # Don't do any operation(by setting number of YCSB thread to be 0)
 def experiment_on_num_nodes(csv_file_name, repeat):
-    num_nodes = [1, 5, 10, 15]
+    num_nodes = [2, 5, 10, 15]
     for run in range(repeat):
         for num_node in num_nodes:
             result = run_experiment(cluster_size=default_cluster_size,
