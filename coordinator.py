@@ -118,12 +118,12 @@ def experiment_on_num_nodes(csv_file_name, repeat):
 
 
 def experiment_on_replication_factor(csv_file_name, repeat):
-    replication_factors = [2, 3, 4]
+    replication_factors = [1, 2, 3, 4]
     for run in range(repeat):
         for replication_factor in replication_factors:
             result = run_experiment(cluster_size=default_cluster_size,
                                     active_cluster_size=default_active_cluster_size,
-                                    num_threads=default_num_threads,
+                                    num_threads=0,
                                     num_records=default_num_records,
                                     workload_type=default_workload_type,
                                     no_reconfiguration=default_no_reconfiguration,
@@ -132,7 +132,7 @@ def experiment_on_replication_factor(csv_file_name, repeat):
 
 
 def experiment_on_num_threads(csv_file_name, repeat):
-    num_threads = [2, 3, 4]
+    num_threads = [1, 2, 3, 4]
     for run in range(repeat):
         for num_thread in num_threads:
             result = run_experiment(cluster_size=default_cluster_size,
@@ -151,7 +151,7 @@ def experiment_on_num_records(csv_file_name, repeat):
         for num_record in num_records:
             result = run_experiment(cluster_size=default_cluster_size,
                                     active_cluster_size=default_active_cluster_size,
-                                    num_threads=default_num_threads,
+                                    num_threads=0,
                                     num_records=num_record,
                                     workload_type=default_workload_type,
                                     no_reconfiguration=default_no_reconfiguration,
@@ -174,8 +174,8 @@ def main():
         repeat = int(config.get('experiment', 'repeat'))
 
         # experiment_on_workloads(csv_file_name, repeat)
-        # experiment_on_num_nodes(csv_file_name, repeat)
-        # experiment_on_replication_factor(csv_file_name, repeat)
+        experiment_on_num_nodes(csv_file_name, repeat)
+        experiment_on_replication_factor(csv_file_name, repeat)
         experiment_on_num_threads(csv_file_name, repeat)
         experiment_on_num_records(csv_file_name, repeat)
 
