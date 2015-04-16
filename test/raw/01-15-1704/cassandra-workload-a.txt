@@ -1,0 +1,20 @@
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+readallfields=true
+
+readproportion=1.0
+updateproportion=0.0
+scanproportion=0
+insertproportion=0.0
+
+requestdistribution=uniform
+
+# For CQL client
+host=127.0.0.1
+port=9042
+columnfamily=usertable
+
+exportfile=/tmp/01-15-1704/result-cassandra-workload-a.txt
+morphous_partition_key=y_id
+
+recordcount=1000000
+operationcount=600000
