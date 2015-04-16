@@ -180,6 +180,10 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     # os.system('ssh %s \'cat %s/log/system.log\'' % (hosts[0], cassandra_home))
     remote_log_file_path = cassandra_home + '/log/system.log'
     (stdout, stderr) = subprocess.Popen(['ssh', hosts[0], 'cat', remote_log_file_path], stdout=subprocess.PIPE).communicate()
+    cassandra_log = open('%s/cassandra.log' % result_path, 'w')
+    cassandra_log.write(stdout)
+    cassandra_log.close()
+
     parser = ps.CassandraLogParser(stdout)
     result_dict = parser.parse()
     if len(result_dict) < 4:

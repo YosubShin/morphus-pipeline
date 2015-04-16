@@ -16,4 +16,4 @@ class CassandraLogParser:
             assert task_name is not None and completion_time is not None
             result[task_name] = completion_time
 
-        print result
+        return result
