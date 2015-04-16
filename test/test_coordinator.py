@@ -1,9 +1,12 @@
 from unittest import TestCase
-import pandas as pd
 import ConfigParser
-from twilio.rest import TwilioRestClient
-import coordinator_old
 import os
+
+import pandas as pd
+from twilio.rest import TwilioRestClient
+
+from old import coordinator_old
+
 
 __author__ = 'Daniel'
 
