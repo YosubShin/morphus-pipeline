@@ -7,6 +7,7 @@ import sys
 import profile
 import logging
 import subprocess
+import cassandra_log_parser as ps
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s: '
@@ -114,6 +115,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     # Save configuration files for this experiment
     meta = ConfigParser.ConfigParser()
     meta.add_section('config')
+    meta.add_section('result')
     meta.set('config', 'profile', pf.get_name())
     meta.set('config', 'num_hosts', len(hosts))
     if overall_target_throughput is not None:
@@ -125,9 +127,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'num_ycsb_nodes', num_ycsb_nodes)
     meta.set('config', 'total_num_ycsb_threads', total_num_ycsb_threads)
     meta.set('config', 'result_dir_name', result_dir_name)
-    meta_file = open('%s/meta.ini' % result_path, 'w')
-    meta.write(meta_file)
-    meta_file.close()
+    meta.set('config', 'workload_proportions', str(workload_proportions))
 
     threads = []
     output = []
@@ -167,7 +167,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     logger.debug('Running Morphus script at host %s' % hosts[0])
     # os.system('ssh %s \'sh %s/lsof.sh \'' % (host, src_path))
-    os.system('%s/bin/nodetool -h %s -m "{"column":"%s"}" morphous %s %s' %
+    os.system('%s/bin/nodetool -h %s -m \'{"column":"%s"}\' morphous %s %s' %
               (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
 
     for t in threads:
@@ -180,7 +180,17 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     # os.system('ssh %s \'cat %s/log/system.log\'' % (hosts[0], cassandra_home))
     remote_log_file_path = cassandra_home + '/log/system.log'
     (stdout, stderr) = subprocess.Popen(['ssh', hosts[0], 'cat', remote_log_file_path], stdout=subprocess.PIPE).communicate()
-    print stdout
+    parser = ps.CassandraLogParser(stdout)
+    result_dict = parser.parse()
+    if len(result_dict) < 4:
+        logger.error('Morphus script not ended completely')
+    else:
+        for k, v in result_dict.iteritems():
+            meta.set('result', k, v)
+
+    meta_file = open('%s/meta.ini' % result_path, 'w')
+    meta.write(meta_file)
+    meta_file.close()
 
 
 # differ throughputs
