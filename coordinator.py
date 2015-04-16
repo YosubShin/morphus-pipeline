@@ -87,12 +87,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         ret = os.system('sh deploy-cassandra-cluster.sh --orig_cassandra_path=%s --cassandra_home=%s '
                         '--seed_host=%s --dst_host=%s --java_path=%s' %
                         (cassandra_path, cassandra_home, seed_host, host, java_path))
-        sleep(15)
+        sleep(5)
 
     # Running YCSB load script
     logger.debug('Running YCSB load script')
     src_path = pf.config.get('path', 'src_path')
-    cassandra_nodes_hosts = ','.join(hosts[0:num_cassandra_nodes])
+    cassandra_nodes_hosts = ' '.join(hosts[0:num_cassandra_nodes])
 
     assert workload_proportions.has_key('read') and \
            workload_proportions.has_key('insert') and \
