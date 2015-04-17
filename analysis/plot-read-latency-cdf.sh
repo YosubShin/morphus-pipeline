@@ -1,9 +1,39 @@
-#!/bin/sh
+#!/bin/bash
+
+for i in "$@"
+do
+case $i in
+    --output_path=*)
+    OUTPUT_PATH="${i#*=}"
+    shift
+    ;;
+    --readonly=*)
+    READONLY="${i#*=}"
+    shift
+    ;;
+    --uniform=*)
+    UNIFORM="${i#*=}"
+    shift
+    ;;
+    --zipfian=*)
+    ZIPFIAN="${i#*=}"
+    shift
+    ;;
+    --latest=*)
+    LATEST="${i#*=}"
+    shift
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+done
+
 gnuplot << EOF
 set terminal pngcairo font 'Times,20' linewidth 2 size 15in,9in 
-set output "${12}"
+set output "${OUTPUT_PATH}"
 
-set xlabel "$1 Latency (ms)"
+set xlabel "Read Latency (ms)"
 set ylabel "Probability"
 set style line 1 lt rgb "#A00000" pt 1 pi 100 lw 2 ps 2
 set style line 2 lt rgb "#00A000" pt 7 pi 100 lw 2 ps 2
@@ -14,14 +44,18 @@ set   autoscale                        # scale axes automatically
 set logscale x
 set xtic auto                          # set xtics automatically
 set ytic auto                          # set ytics automatically
-set yrange [0:1.1]
-set xrange [0.8:30]
+set yrange [0:1]
+set xrange [1:50]
 set key right bottom
 
-plot   	"$2" using 1:2 title 'No Reconf' with linespoints ls 5, \
-        "$3" using 1:2 title 'No Write' with linespoints ls 1, \
-        "$4" using 1:2 title 'Uniform' with linespoints ls 2, \
-    	"$5" using 1:2 title 'Latest' with linespoints ls 3, \
-    	"$6" using 1:2 title 'Zipf' with linespoints ls 4
+set datafile separator ","
+
+plot    "${READONLY}" using 1:2 title 'No Write' with linespoints ls 1, \
+        "${UNIFORM}" using 1:2 title 'Uniform' with linespoints ls 2, \
+    	"${LATEST}" using 1:2 title 'Latest' with linespoints ls 3, \
+    	"${ZIPFIAN}" using 1:2 title 'Zipf' with linespoints ls 4
 
 EOF
+
+
+#plot   	"$2" using 1:2 title 'No Reconf' with linespoints ls 5, \
