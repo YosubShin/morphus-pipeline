@@ -211,7 +211,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         parser = ps.CassandraLogParser(morphus_result_f.read())
         result_dict = parser.parse()
         logger.debug('Morphous result: %s' % str(result_dict))
-        if len(result_dict) < 4:
+        if len(result_dict) < 5:
             logger.error('Morphus script not ended completely')
         else:
             for k, v in result_dict.iteritems():
