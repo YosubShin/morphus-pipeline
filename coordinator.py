@@ -99,9 +99,10 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     src_path = pf.config.get('path', 'src_path')
     cassandra_nodes_hosts = ' '.join(hosts[0:num_cassandra_nodes])
 
-    if workload_proportions.has_key('read') and \
-       workload_proportions.has_key('insert') and \
-       workload_proportions.has_key('update'):
+    if workload_proportions is not None and \
+            workload_proportions.has_key('read') and \
+            workload_proportions.has_key('insert') and \
+            workload_proportions.has_key('update'):
         pass
     else:
         workload_proportions = {'read': 10, 'update': 0, 'insert': 0}
