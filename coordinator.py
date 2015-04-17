@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 private_config = ConfigParser.SafeConfigParser()
 private_config.read('private.ini')
 
-workload_types = ['uniform', 'zipfian', 'latest', 'readonly']
-
 
 class YcsbExecuteThread(Thread):
     def __init__(self, pf, host, target_throughput, result_path, output, mutex, delay_in_millisec, altered,
@@ -203,6 +201,39 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta_file = open('%s/meta.ini' % result_path, 'w')
     meta.write(meta_file)
     meta_file.close()
+
+
+def experiment_on_workloads(pf, repeat):
+    workload_types = {
+        'uniform': {'read': 4, 'update': 4, 'insert': 2},
+        'zipfian': {'read': 4, 'update': 4, 'insert': 2},
+        'latest': {'read': 4, 'update': 4, 'insert': 2},
+        'readonly': {'read': 10, 'update': 0, 'insert': 0}
+    }
+    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+
+    for run in range(repeat):
+        for workload_type, workload_proportions in workload_types.iteritems():
+            for measurement_type in ['histogram', 'timeseries']:
+                total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+                num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+                logger.debug('workload_type=%s, num_cassandra_nodes=%d, total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
+                             % (workload_type, num_cassandra_nodes, total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+
+                result = run_experiment(pf,
+                                        hosts=pf.get_hosts(),
+                                        overall_target_throughput=target_throughput,
+                                        total_num_records=total_num_records,
+                                        workload_type=workload_type,
+                                        replication_factor=replication_factor,
+                                        num_cassandra_nodes=num_cassandra_nodes,
+                                        num_ycsb_nodes=num_ycsb_nodes,
+                                        total_num_ycsb_threads=total_num_ycsb_threads,
+                                        workload_proportions=workload_proportions,
+                                        measurement_type=measurement_type)
 
 
 # differ throughputs

@@ -50,7 +50,7 @@ fi
 
 if [ "${ALTERED}" = "False" ]; then
 WORKLOAD_FILENAME="workload.txt"
-RESULT_POSTFIX=""
+RESULT_POSTFIX="-original"
 else
 WORKLOAD_FILENAME="workload-altered.txt"
 RESULT_POSTFIX="-altered"
@@ -63,4 +63,4 @@ THROUGHPUT_PROPERTY="-target ${THROUGHPUT}"
 fi
 
 # Execute YCSB Workload
-${YCSB_PATH}/bin/ycsb run cassandra-cql -s ${THROUGHPUT_PROPERTY} -P ${BASE_PATH}/${WORKLOAD_FILENAME} -p warmupexecutiontime=${DELAY_IN_MILLISEC} -p measurementtype=${MEASUREMENT_TYPE} > ${BASE_PATH}/execution-output-${HOST}${RESULT_POSTFIX}.txt
+${YCSB_PATH}/bin/ycsb run cassandra-cql -s ${THROUGHPUT_PROPERTY} -P ${BASE_PATH}/${WORKLOAD_FILENAME} -p warmupexecutiontime=${DELAY_IN_MILLISEC} -p measurementtype=${MEASUREMENT_TYPE} 2> ${BASE_PATH}/stderr-execution-output-${HOST}${RESULT_POSTFIX}.txt 1> ${BASE_PATH}/execution-output-${HOST}${RESULT_POSTFIX}.txt

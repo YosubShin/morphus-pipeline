@@ -36,14 +36,10 @@ class EmulabProfile(BaseProfile):
     def get_log_path(self):
         return '/tmp'
 
-    def get_heuristic_target_throughputs(self, num_cassandra_nodes):
-        single_node_throughput = 15000
-        throughput_delta_for_added_node = 15000
-        safety_ratio = 2.0
-
-        heuristic_max_throughput = int((single_node_throughput + (num_cassandra_nodes - 1) * throughput_delta_for_added_node) * safety_ratio)
-        measurement_interval = heuristic_max_throughput / 10
-        return range(measurement_interval, heuristic_max_throughput, measurement_interval)
+    def get_heuristic_target_throughput(self, num_cassandra_nodes):
+        single_node_throughput = 10000
+        # Dividing by 2 because two ycsb processes are run for two different schemas
+        return single_node_throughput / 2
 
     def get_max_num_cassandra_nodes(self):
         return 10
@@ -55,7 +51,7 @@ class EmulabProfile(BaseProfile):
         return 250
 
     def get_max_num_connections_per_cassandra_node(self):
-        return 32  # 8 connections per core (according to Solving Big Data Challenges paper)
+        return 16  # 8 connections per core (according to Solving Big Data Challenges paper) * 4 cores / 2 (two different schemas)
 
 
 
