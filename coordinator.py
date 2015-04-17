@@ -102,7 +102,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
            workload_proportions.has_key('update')
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
-    max_execution_time = 30 + 70 * total_num_records / 1000000
+    max_execution_time = 60 + 70 * total_num_records / 1000000
     ret = os.system('ssh %s \'sh %s/ycsb-load.sh '
                     '--cassandra_path=%s --ycsb_path=%s '
                     '--base_path=%s --num_records=%d --workload=%s '
@@ -211,19 +211,19 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
 
 def experiment_on_workloads(pf, repeat):
-    workload_types = {
-        'uniform': {'read': 4, 'update': 4, 'insert': 2},
-        'zipfian': {'read': 4, 'update': 4, 'insert': 2},
-        'latest': {'read': 4, 'update': 4, 'insert': 2},
-        'readonly': {'read': 10, 'update': 0, 'insert': 0}
-    }
+    workload_types = [
+        ('uniform', {'read': 4, 'update': 4, 'insert': 2}),
+        ('zipfian', {'read': 4, 'update': 4, 'insert': 2}),
+        ('latest', {'read': 4, 'update': 4, 'insert': 2}),
+        ('uniform', {'read': 10, 'update': 0, 'insert': 0})
+    ]
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
 
     for run in range(repeat):
-        for workload_type, workload_proportions in workload_types.iteritems():
+        for workload_type, workload_proportions in workload_types:
             for measurement_type in ['histogram', 'timeseries']:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
@@ -365,9 +365,11 @@ def main():
     # experiment_on_num_ycsb_threads(pf)
     # experiment_on_latency_scalability(pf)
 
-    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
-    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
-    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
+    # workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
+    # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
+
+    experiment_on_workloads(pf, repeat)
 
     # Copy log to result directory
     os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
