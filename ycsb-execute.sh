@@ -44,10 +44,6 @@ case $i in
 esac
 done
 
-if [ "emulab" = "$PROFILE" ]; then
-ulimit -n 32768
-fi
-
 if [ "${ALTERED}" = "False" ]; then
 WORKLOAD_FILENAME="workload.txt"
 RESULT_POSTFIX="-original"
