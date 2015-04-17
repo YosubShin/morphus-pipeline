@@ -201,7 +201,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         for k, v in result_dict.iteritems():
             meta.set('result', k, v)
 
-    meta.set('experiment', 'cassandra_coordinator_host', hosts[0])
+    meta.set('config', 'cassandra_coordinator_host', hosts[0])
 
     meta_file = open('%s/meta.ini' % result_path, 'w')
     meta.write(meta_file)
