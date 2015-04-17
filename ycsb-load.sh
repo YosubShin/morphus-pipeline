@@ -54,6 +54,10 @@ case $i in
     UPDATE_PROPORTION="${i#*=}"
     shift
     ;;
+    --max_execution_time=*)
+    MAX_EXECUTION_TIME="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -92,7 +96,6 @@ if [ ! -f ${BASE_PATH} ]; then
     mkdir ${BASE_PATH}
 fi
 
-MAX_EXECUTION_TIME=300
 OPERATION_COUNT="$((${MAX_EXECUTION_TIME} * 1000000))"
 
 # Create YCSB workload file

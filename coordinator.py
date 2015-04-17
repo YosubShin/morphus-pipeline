@@ -102,15 +102,17 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
            workload_proportions.has_key('update')
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
+    max_execution_time = 30 + 70 * total_num_records / 1000000
     ret = os.system('ssh %s \'sh %s/ycsb-load.sh '
                     '--cassandra_path=%s --ycsb_path=%s '
                     '--base_path=%s --num_records=%d --workload=%s '
                     '--replication_factor=%d --seed_host=%s --hosts=%s --num_threads=%d '
-                    '--read_proportion=%d --insert_proportion=%d --update_proportion=%d \''
+                    '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d \''
                     % (hosts[num_cassandra_nodes], src_path, cassandra_path, ycsb_path,
                        result_path, total_num_records, workload_type,
                        replication_factor, seed_host, cassandra_nodes_hosts, num_ycsb_threads,
-                       workload_proportions['read'], workload_proportions['insert'], workload_proportions['update']))
+                       workload_proportions['read'], workload_proportions['insert'], workload_proportions['update'],
+                       max_execution_time))
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
@@ -169,14 +171,14 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         delay_in_millisec -= interval_in_millisec
         sleep(interval_in_millisec * 0.001)
 
-    meta.set('result', 'ycsb_start_at_in_python', time.time() * 1000 + delay_in_millisec)
+    meta.set('result', 'ycsb_start_at_in_python', int(time.time() * 1000 + delay_in_millisec))
 
     sleep(30)
     logger.debug('Running Morphus script at host %s' % hosts[0])
     # os.system('ssh %s \'sh %s/lsof.sh \'' % (host, src_path))
     os.system('%s/bin/nodetool -h %s -m \'{"column":"%s"}\' morphous %s %s' %
               (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
-    meta.set('result', 'morphus_start_at_in_python', time.time() * 1000)
+    meta.set('result', 'morphus_start_at_in_python', int(time.time() * 1000))
 
     for t in threads:
         t.join()
