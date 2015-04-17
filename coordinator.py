@@ -99,9 +99,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     src_path = pf.config.get('path', 'src_path')
     cassandra_nodes_hosts = ' '.join(hosts[0:num_cassandra_nodes])
 
-    assert workload_proportions.has_key('read') and \
-           workload_proportions.has_key('insert') and \
-           workload_proportions.has_key('update')
+    if workload_proportions.has_key('read') and \
+       workload_proportions.has_key('insert') and \
+       workload_proportions.has_key('update'):
+        pass
+    else:
+        workload_proportions = {'read': 10, 'update': 0, 'insert': 0}
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
     max_execution_time = 60 + 70 * total_num_records / 1000000
