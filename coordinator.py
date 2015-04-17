@@ -7,6 +7,7 @@ import sys
 import profile
 import logging
 import cassandra_log_parser as ps
+import time
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s: '
@@ -168,11 +169,14 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         delay_in_millisec -= interval_in_millisec
         sleep(interval_in_millisec * 0.001)
 
+    meta.set('result', 'ycsb_start_at_in_python', time.time() * 1000 + delay_in_millisec)
+
     sleep(30)
     logger.debug('Running Morphus script at host %s' % hosts[0])
     # os.system('ssh %s \'sh %s/lsof.sh \'' % (host, src_path))
     os.system('%s/bin/nodetool -h %s -m \'{"column":"%s"}\' morphous %s %s' %
               (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
+    meta.set('result', 'morphus_start_at_in_python', time.time() * 1000)
 
     for t in threads:
         t.join()
@@ -182,7 +186,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     # Collect log files from cassandra hosts
     logger.debug('Collecting Cassandra logs...')
     for host in hosts[0:num_cassandra_nodes]:
-        os.system('scp %s %s/%s/log/system.log %s/cassandra-log-%s.txt' %
+        os.system('scp %s:%s/%s/log/system.log %s/cassandra-log-%s.txt' %
                   (host, cassandra_home_base_path, host, result_path, host))
 
     # Extract Morphus result from coordinator machine's log
@@ -359,9 +363,9 @@ def main():
     # experiment_on_num_ycsb_threads(pf)
     # experiment_on_latency_scalability(pf)
 
-    workload_distribution = {'read': 4, 'update': 4, 'insert': 2}
-    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_distribution, 'histogram')
-    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_distribution, 'timeseries')
+    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
+    run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
     # Copy log to result directory
     os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
