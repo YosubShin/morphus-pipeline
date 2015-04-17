@@ -120,6 +120,8 @@ port=9042
 
 cassandra.isalteredprimarykey=false
 
+timeseries.granularity=10
+
 EOF
 
 # Create YCSB workload file for altered schema
@@ -146,6 +148,8 @@ host=${HOSTS}
 port=9042
 
 cassandra.isalteredprimarykey=true
+
+timeseries.granularity=10
 
 EOF
 

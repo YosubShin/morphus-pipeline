@@ -34,6 +34,10 @@ case $i in
     ALTERED="${i#*=}"
     shift
     ;;
+    --measurement_type=*)
+    MEASUREMENT_TYPE="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -59,4 +63,4 @@ THROUGHPUT_PROPERTY="-target ${THROUGHPUT}"
 fi
 
 # Execute YCSB Workload
-${YCSB_PATH}/bin/ycsb run cassandra-cql -s ${THROUGHPUT_PROPERTY} -P ${BASE_PATH}/${WORKLOAD_FILENAME} -p warmupexecutiontime=${DELAY_IN_MILLISEC} 2> ${BASE_PATH}/execution-output-stderr-${HOST}${RESULT_POSTFIX}.txt 1> ${BASE_PATH}/execution-output-${HOST}${RESULT_POSTFIX}.txt
+${YCSB_PATH}/bin/ycsb run cassandra-cql -s ${THROUGHPUT_PROPERTY} -P ${BASE_PATH}/${WORKLOAD_FILENAME} -p warmupexecutiontime=${DELAY_IN_MILLISEC} -p measurementtype=${MEASUREMENT_TYPE} > ${BASE_PATH}/execution-output-${HOST}${RESULT_POSTFIX}.txt

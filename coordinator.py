@@ -25,7 +25,8 @@ workload_types = ['uniform', 'zipfian', 'latest', 'readonly']
 
 
 class YcsbExecuteThread(Thread):
-    def __init__(self, pf, host, target_throughput, result_path, output, mutex, delay_in_millisec, altered):
+    def __init__(self, pf, host, target_throughput, result_path, output, mutex, delay_in_millisec, altered,
+                 measurement_type):
         Thread.__init__(self)
         self.pf = pf
         self.host = host
@@ -35,16 +36,18 @@ class YcsbExecuteThread(Thread):
         self.mutex = mutex
         self.delay_in_millisec = delay_in_millisec
         self.altered = altered
+        self.measurement_type = measurement_type
 
     def run(self):
         logger.debug('Running YCSB executor thread at host %s with %d ms delay' % (self.host, self.delay_in_millisec))
         ycsb_path = self.pf.config.get('path', 'ycsb_path')
         src_path = self.pf.config.get('path', 'src_path')
         ret = os.system('ssh %s \'sh %s/ycsb-execute.sh --ycsb_path=%s --base_path=%s '
-                        '--throughput=%d --host=%s --profile=%s --delay_in_millisec=%d --altered=%s\''
+                        '--throughput=%d --host=%s --profile=%s --delay_in_millisec=%d --altered=%s '
+                        '--measurement_type=%s\''
                         % (self.host, src_path, ycsb_path, self.result_path,
                            int(self.target_throughput or 0), self.host, self.pf.get_name(), self.delay_in_millisec,
-                           str(self.altered)))
+                           str(self.altered), self.measurement_type))
         self.mutex.acquire()
         self.output.append(ret)
         self.mutex.release()
@@ -52,7 +55,8 @@ class YcsbExecuteThread(Thread):
 
 
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
-                   num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions):
+                   num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
+                   measurement_type='histogram'):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -63,10 +67,10 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     result_path = '%s/%s' % (result_base_path, result_dir_name)
     logger.debug('Executing w/ pf=%s, num_hosts=%d, overall_target_throughput=%d, workload_type=%s, '
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
-                 'num_ycsb_nodes=%d, total_num_ycsb_threads=%d' %
+                 'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
-                  num_ycsb_nodes, total_num_ycsb_threads))
+                  num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -128,6 +132,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'total_num_ycsb_threads', total_num_ycsb_threads)
     meta.set('config', 'result_dir_name', result_dir_name)
     meta.set('config', 'workload_proportions', str(workload_proportions))
+    meta.set('config', 'measurement_type', measurement_type)
 
     threads = []
     output = []
@@ -150,7 +155,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     # Run YCSB workload for original schema
     for host in hosts[num_cassandra_nodes:num_cassandra_nodes + num_ycsb_nodes]:
-        current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec, False)
+        current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec,
+                                           False, measurement_type)
         threads.append(current_thread)
         current_thread.start()
         delay_in_millisec -= interval_in_millisec
@@ -158,7 +164,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     # Run YCSB workload for altered schema
     for host in hosts[num_cassandra_nodes:num_cassandra_nodes + num_ycsb_nodes]:
-        current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec, True)
+        current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec,
+                                           True, measurement_type)
         threads.append(current_thread)
         current_thread.start()
         delay_in_millisec -= interval_in_millisec
@@ -186,6 +193,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     parser = ps.CassandraLogParser(stdout)
     result_dict = parser.parse()
+    logger.debug('Morphous result:%s' % str(result_dict))
     if len(result_dict) < 4:
         logger.error('Morphus script not ended completely')
     else:
@@ -320,7 +328,8 @@ def main():
     # experiment_on_latency_scalability(pf)
 
     workload_distribution = {'read': 4, 'update': 4, 'insert': 2}
-    run_experiment(pf, pf.get_hosts(), None, 'uniform', 1000000, 1, 10, 1, 50, workload_distribution)
+    run_experiment(pf, pf.get_hosts(), 50000, 'uniform', 1000000, 1, 10, 1, 160, workload_distribution, 'histogram')
+    run_experiment(pf, pf.get_hosts(), 50000, 'uniform', 1000000, 1, 10, 1, 160, workload_distribution, 'timeseries')
 
     # Copy log to result directory
     os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
