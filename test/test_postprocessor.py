@@ -4,7 +4,7 @@ import shutil
 
 import pandas as pd
 
-from analysis import postprocessor as pp
+from old import postprocessor as pp
 
 
 __author__ = 'Daniel'
