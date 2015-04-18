@@ -157,4 +157,4 @@ timeseries.granularity=10
 EOF
 
 # Load YCSB Workload
-${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=600 > ${BASE_PATH}/load-output.txt
+${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=2000 > ${BASE_PATH}/load-output.txt
