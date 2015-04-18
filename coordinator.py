@@ -187,7 +187,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                   (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
 
     if not should_inject_operations and should_reconfigure:
-        sleep(max_execution_time)
+        sleep_for = max_execution_time
+        default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+        if num_cassandra_nodes != default_num_cassandra_nodes:
+            sleep_for = 60 + 70 * default_num_cassandra_nodes / num_cassandra_nodes
+        logger.debug('No operations are being injected, and instead sleep for %s seconds' % sleep_for)
+        sleep(sleep_for)
     else:
         for t in threads:
             t.join()
@@ -206,7 +211,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
         parser = ps.CassandraLogParser(morphus_result_f.read())
         result_dict = parser.parse()
-        logger.debug('Morphous result: %s' % str(result_dict))
+        logger.debug('Morphus result: %s' % str(result_dict))
         if len(result_dict) < 5:
             logger.error('Morphus script not ended completely')
         else:

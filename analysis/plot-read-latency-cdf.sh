@@ -45,7 +45,7 @@ set logscale x
 set xtic auto                          # set xtics automatically
 set ytic auto                          # set ytics automatically
 set yrange [0:1]
-set xrange [1:50]
+set xrange [1:10]
 set key right bottom
 
 set datafile separator ","
