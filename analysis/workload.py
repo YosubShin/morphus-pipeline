@@ -154,11 +154,13 @@ for dir_name in os.listdir(raw_data_root):
 
         output_fs = filter(lambda x: x.find('output-') != -1 and x.find('stderr') == -1, os.listdir(cur_dir_path))
         if meta.get('config', 'measurement_type') == 'timeseries':
+            morphus_start_at = int(meta.get('result', 'MorphusStartAt'))
             paths = {}
             workload_type = ''
             for fname in output_fs:
                 f = open('%s/%s' % (cur_dir_path, fname))
                 df = ycsb_parser.parse_timeseries(f.read(), 'read')
+                df['0time'] -= morphus_start_at
                 workload_type = meta.get('config', 'workload_type')
                 if json.loads(meta.get('config', 'workload_proportions').replace("'", '"'))['read'] == 10:
                     workload_type = 'readonly'
@@ -167,15 +169,15 @@ for dir_name in os.listdir(raw_data_root):
                 df.to_csv(path, header=False, index=False)
                 paths[key] = path
 
-            if not (meta.has_option('result', 'compactmorphoustask') and meta.has_option('result', 'insertmorphoustask') and meta.has_option('result', 'atomicswitchmorphoustask') and meta.has_option('result', 'catchupmorphoustask')):
+            if not (meta.has_option('result', 'CompactMorphusTask') and meta.has_option('result', 'InsertMorphusTask') and meta.has_option('result', 'AtomicSwitchMorphusTask') and meta.has_option('result', 'CatchupMorphusTask')):
                 print 'Incomplete Morphus script for %s' % dir_name
                 continue
 
-            morphus_start_at = int(meta.get('result', 'morphus_start_at_in_python')) - int(meta.get('result', 'ycsb_start_at_in_python'))
-            compact_morphus_task = int(meta.get('result', 'compactmorphoustask')) + morphus_start_at
-            insert_morphus_task = int(meta.get('result', 'insertmorphoustask')) + morphus_start_at
-            atomicswitch_morphus_task = int(meta.get('result', 'atomicswitchmorphoustask')) + morphus_start_at
-            catchup_morphus_task = int(meta.get('result', 'catchupmorphoustask')) + morphus_start_at
+            compact_morphus_task = int(meta.get('result', 'CompactMorphusTask')) - morphus_start_at
+            insert_morphus_task = int(meta.get('result', 'InsertMorphusTask')) - morphus_start_at
+            atomicswitch_morphus_task = int(meta.get('result', 'AtomicSwitchMorphusTask')) - morphus_start_at
+            catchup_morphus_task = int(meta.get('result', 'CatchupMorphusTask')) - morphus_start_at
+            morphus_start_at = 0
 
             output_path = '%s/timeseries-read-%s-%s.png' % (output_dir_path, workload_type, dir_name)
 

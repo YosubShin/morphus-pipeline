@@ -162,8 +162,6 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         else:
             target_throughput = None
 
-        meta.set('result', 'ycsb_start_at_in_python', int(time.time() * 1000 + delay_in_millisec))
-
         # Run YCSB workload for original schema
         for host in hosts[num_cassandra_nodes:num_cassandra_nodes + num_ycsb_nodes]:
             current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec,
@@ -185,8 +183,6 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     if should_reconfigure:
         logger.debug('Running Morphus script at host %s' % hosts[0])
-        meta.set('result', 'morphus_start_at_in_python', int(time.time() * 1000))
-        # os.system('ssh %s \'sh %s/lsof.sh \'' % (host, src_path))
         os.system('%s/bin/nodetool -h %s -m \'{"column":"%s"}\' morphous %s %s' %
                   (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
 
