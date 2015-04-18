@@ -226,11 +226,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
 
 def experiment_on_workloads(pf, repeat):
-    workload_types = [
-        ('uniform', {'read': 4, 'update': 4, 'insert': 2}),
-        ('zipfian', {'read': 4, 'update': 4, 'insert': 2}),
-        ('latest', {'read': 4, 'update': 4, 'insert': 2}),
-        ('uniform', {'read': 10, 'update': 0, 'insert': 0})
+    workload_parameters = [  # (Workload type, Workload proportions, should_reconfigure)
+        ('uniform', {'read': 4, 'update': 4, 'insert': 2}, True),
+        ('zipfian', {'read': 4, 'update': 4, 'insert': 2}, True),
+        ('latest', {'read': 4, 'update': 4, 'insert': 2}, True),
+        ('uniform', {'read': 10, 'update': 0, 'insert': 0}, True),
+        ('uniform', {'read': 4, 'update': 4, 'insert': 2}, False)
     ]
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
@@ -238,12 +239,14 @@ def experiment_on_workloads(pf, repeat):
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
 
     for run in range(repeat):
-        for workload_type, workload_proportions in workload_types:
+        for workload_type, workload_proportions, should_reconfigure in workload_parameters:
             for measurement_type in ['histogram', 'timeseries']:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-                logger.debug('workload_type=%s, num_cassandra_nodes=%d, total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
-                             % (workload_type, num_cassandra_nodes, total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+                logger.debug('workload_type=%s, workload_proportions=%s, should_reconfigure=%s, num_cassandra_nodes=%d,'
+                             ' total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
+                             % (workload_type, str(workload_proportions), should_reconfigure, num_cassandra_nodes,
+                                total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
 
                 result = run_experiment(pf,
                                         hosts=pf.get_hosts(),
@@ -257,7 +260,7 @@ def experiment_on_workloads(pf, repeat):
                                         workload_proportions=workload_proportions,
                                         measurement_type=measurement_type,
                                         should_inject_operations=True,
-                                        should_reconfigure=True)
+                                        should_reconfigure=should_reconfigure)
 
 
 def experiment_on_num_cassandra_nodes(pf, repeat):
@@ -272,8 +275,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
         for num_cassandra_nodes in num_cassandra_nodes_list:
             total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
             num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-            logger.debug('workload_type=%s, num_cassandra_nodes=%d, total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
-                         % (workload_type, num_cassandra_nodes, total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+            logger.debug('num_cassandra_nodes=%d' % num_cassandra_nodes)
 
             result = run_experiment(pf,
                                     hosts=pf.get_hosts(),
@@ -303,8 +305,7 @@ def experiment_on_num_records(pf, repeat):
         for total_num_records in total_num_records_list:
             total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
             num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-            logger.debug('workload_type=%s, num_cassandra_nodes=%d, total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
-                         % (workload_type, num_cassandra_nodes, total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+            logger.debug('total_num_records=%d' % total_num_records)
 
             result = run_experiment(pf,
                                     hosts=pf.get_hosts(),
@@ -333,8 +334,7 @@ def experiment_on_replication_factors(pf, repeat):
         for replication_factor in replication_factors:
             total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
             num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-            logger.debug('workload_type=%s, num_cassandra_nodes=%d, total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
-                         % (workload_type, num_cassandra_nodes, total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+            logger.debug('replication_factor=%d' % replication_factor)
 
             result = run_experiment(pf,
                                     hosts=pf.get_hosts(),
@@ -348,6 +348,43 @@ def experiment_on_replication_factors(pf, repeat):
                                     workload_proportions=None,
                                     measurement_type=measurement_type,
                                     should_inject_operations=False,
+                                    should_reconfigure=True)
+
+
+def experiment_on_operations_rate(pf, repeat):
+    experiment_parameters = [
+        (False, 0),
+        (True, 100),
+        (True, 300),
+        (True, 700),
+        (True, 1000)
+    ]
+    workload_type = pf.config.get('experiment', 'default_workload_type')
+    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    measurement_type = pf.config.get('experiment', 'default_measurement_type')
+
+    for run in range(repeat):
+        for should_inject_operations, overall_target_throughput in experiment_parameters:
+            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+
+            logger.debug('overall_target_throughput=%d' % overall_target_throughput)
+
+            result = run_experiment(pf,
+                                    hosts=pf.get_hosts(),
+                                    overall_target_throughput=overall_target_throughput,
+                                    total_num_records=total_num_records,
+                                    workload_type=workload_type,
+                                    replication_factor=replication_factor,
+                                    num_cassandra_nodes=num_cassandra_nodes,
+                                    num_ycsb_nodes=num_ycsb_nodes,
+                                    total_num_ycsb_threads=total_num_ycsb_threads,
+                                    workload_proportions=workload_proportions,
+                                    measurement_type=measurement_type,
+                                    should_inject_operations=should_inject_operations,
                                     should_reconfigure=True)
 
 
@@ -367,10 +404,11 @@ def main():
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-    experiment_on_workloads(pf, repeat)
-    # experiment_on_num_cassandra_nodes(pf, repeat)
-    # experiment_on_num_records(pf, repeat)
-    # experiment_on_replication_factors(pf, repeat)
+    # experiment_on_workloads(pf, repeat)
+    experiment_on_num_cassandra_nodes(pf, repeat)
+    experiment_on_num_records(pf, repeat)
+    experiment_on_replication_factors(pf, repeat)
+    experiment_on_operations_rate(pf, repeat)
 
     # Copy log to result directory
     os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
