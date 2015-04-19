@@ -300,7 +300,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
 
 def experiment_on_num_records(pf, repeat):
     # No operations injected
-    capacity_list = [1, 5, 10, 20]
+    capacity_list = [5, 10, 20]
     total_num_records_list = [x * 1000000 for x in capacity_list]
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
@@ -330,7 +330,7 @@ def experiment_on_num_records(pf, repeat):
 
 def experiment_on_replication_factors(pf, repeat):
     # No operations injected
-    replication_factors = [1, 2, 3, 4]
+    replication_factors = [2, 3, 4]
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
@@ -359,7 +359,6 @@ def experiment_on_replication_factors(pf, repeat):
 
 def experiment_on_operations_rate(pf, repeat):
     experiment_parameters = [
-        (False, 0),
         (True, 100),
         (True, 300),
         (True, 700),
