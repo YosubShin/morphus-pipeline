@@ -192,11 +192,11 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
         default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
         if num_cassandra_nodes != default_num_cassandra_nodes:
-            sleep_for = 60 + 70 * default_num_cassandra_nodes / num_cassandra_nodes
+            sleep_for = 60 + 30 * default_num_cassandra_nodes / num_cassandra_nodes
         elif total_num_records > default_total_num_records:
-            sleep_for = 60 + 70 * total_num_records / default_total_num_records
+            sleep_for = 60 + 30 * total_num_records / default_total_num_records
         elif replication_factor > default_replication_factor:
-            sleep_for = 60 + 70 * replication_factor / default_replication_factor
+            sleep_for = 60 + 30 * replication_factor / default_replication_factor
         logger.debug('No operations are being injected, and instead sleep for %s seconds' % sleep_for)
         sleep(sleep_for)
     else:
