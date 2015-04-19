@@ -106,9 +106,9 @@ bash -c "cat > ${CASSANDRA_HOME}/cassandra/conf/cassandra.yaml" <<-EOF
     multithreaded_compaction: false
     compaction_throughput_mb_per_sec: 16
     compaction_preheat_key_cache: true
-    read_request_timeout_in_ms: 5000
+    read_request_timeout_in_ms: 10000
     range_request_timeout_in_ms: 10000
-    write_request_timeout_in_ms: 2000
+    write_request_timeout_in_ms: 10000
     cas_contention_timeout_in_ms: 1000
     truncate_request_timeout_in_ms: 60000
     request_timeout_in_ms: 10000

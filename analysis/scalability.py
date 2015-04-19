@@ -35,10 +35,10 @@ for dir_name in os.listdir(raw_data_root):
 
 df = pd.DataFrame(rows)
 df = df.fillna(value={'target_throughput': '0'})
-df = df.dropna(subset=['catchupmorphustask'])
 df.to_csv('%s/data.csv' % output_dir_path, index=False)
 
 df = pd.read_csv('%s/data.csv' % output_dir_path)
+df = df.dropna(subset=['catchupmorphustask'])
 
 # Number of Cassandra Nodes
 num_cassandra_nodes_df = df[(df['num_records'] == 1000000) & (df['replication_factor'] == 1) & (df['should_inject_operations'] == False)]
