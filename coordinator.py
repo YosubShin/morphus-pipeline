@@ -183,7 +183,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     if should_reconfigure:
         logger.debug('Running Morphus script at host %s' % hosts[0])
-        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s", "compact":"%s"}\' morphous %s %s' %
+        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s","compact":"%s"}\' morphous %s %s' %
                   (cassandra_path, hosts[0], 'field0', str(should_compact).lower(), 'ycsb', 'usertable'))
 
     if not should_inject_operations and should_reconfigure:
