@@ -54,7 +54,7 @@ class YcsbExecuteThread(Thread):
 
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
-                   measurement_type, should_inject_operations, should_reconfigure):
+                   measurement_type, should_inject_operations, should_reconfigure, should_compact=True):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -183,8 +183,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     if should_reconfigure:
         logger.debug('Running Morphus script at host %s' % hosts[0])
-        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s"}\' morphous %s %s' %
-                  (cassandra_path, hosts[0], 'field0', 'ycsb', 'usertable'))
+        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s", "compact":"%s"}\' morphous %s %s' %
+                  (cassandra_path, hosts[0], 'field0', str(should_compact).lower(), 'ycsb', 'usertable'))
 
     if not should_inject_operations and should_reconfigure:
         sleep_for = max_execution_time
@@ -394,6 +394,37 @@ def experiment_on_operations_rate(pf, repeat):
                                     should_reconfigure=True)
 
 
+def experiment_with_no_compaction(pf, repeat):
+    # No operations injected
+    capacity_list = [1, 5, 10, 20]
+    total_num_records_list = [x * 1000000 for x in capacity_list]
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    workload_type = pf.config.get('experiment', 'default_workload_type')
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    measurement_type = pf.config.get('experiment', 'default_measurement_type')
+
+    for run in range(repeat):
+        for total_num_records in total_num_records_list:
+            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+            logger.debug('total_num_records=%d' % total_num_records)
+
+            result = run_experiment(pf,
+                                    hosts=pf.get_hosts(),
+                                    overall_target_throughput=None,
+                                    total_num_records=total_num_records,
+                                    workload_type=workload_type,
+                                    replication_factor=replication_factor,
+                                    num_cassandra_nodes=num_cassandra_nodes,
+                                    num_ycsb_nodes=num_ycsb_nodes,
+                                    total_num_ycsb_threads=total_num_ycsb_threads,
+                                    workload_proportions=None,
+                                    measurement_type=measurement_type,
+                                    should_inject_operations=False,
+                                    should_reconfigure=True,
+                                    should_compact=False)
+
+
 def main():
     profile_name = sys.argv[1]
     pf = profile.get_profile(profile_name)
@@ -410,11 +441,12 @@ def main():
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-    # experiment_on_workloads(pf, repeat)
+    experiment_on_workloads(pf, repeat)
     experiment_on_num_cassandra_nodes(pf, repeat)
     experiment_on_num_records(pf, repeat)
     experiment_on_replication_factors(pf, repeat)
     experiment_on_operations_rate(pf, repeat)
+    experiment_with_no_compaction(pf, repeat)
 
     # Copy log to result directory
     os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
