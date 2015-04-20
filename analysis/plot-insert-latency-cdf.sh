@@ -19,6 +19,10 @@ case $i in
     LATEST="${i#*=}"
     shift
     ;;
+    --noreconfig=*)
+    NORECONFIG="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -48,7 +52,8 @@ set datafile separator ","
 
 plot    "${UNIFORM}" using 1:2 title 'Uniform' with linespoints ls 2, \
     	"${LATEST}" using 1:2 title 'Latest' with linespoints ls 3, \
-    	"${ZIPFIAN}" using 1:2 title 'Zipf' with linespoints ls 4
+    	"${ZIPFIAN}" using 1:2 title 'Zipf' with linespoints ls 4, \
+        "${NORECONFIG}" using 1:2 title 'No Reconfiguration' with linespoints ls 5
 
 EOF
 

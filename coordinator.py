@@ -66,11 +66,11 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     logger.debug('Executing w/ pf=%s, num_hosts=%d, overall_target_throughput=%d, workload_type=%s, '
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
-                 'should_inject_operations=%s, should_reconfigure=%s' %
+                 'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
-                  should_inject_operations, should_reconfigure))
+                  should_inject_operations, should_reconfigure, should_compact))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -141,6 +141,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'measurement_type', measurement_type)
     meta.set('config', 'should_inject_operations', should_inject_operations)
     meta.set('config', 'should_reconfigure', should_reconfigure)
+    meta.set('config', 'should_compact', should_compact)
 
     threads = []
     output = []
@@ -218,7 +219,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         parser = ps.CassandraLogParser(morphus_result_f.read())
         result_dict = parser.parse()
         logger.debug('Morphus result: %s' % str(result_dict))
-        if len(result_dict) < 5:
+        if len(result_dict) < 4:
             logger.error('Morphus script not ended completely')
         else:
             for k, v in result_dict.iteritems():
@@ -300,7 +301,8 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
 
 def experiment_on_num_records(pf, repeat):
     # No operations injected
-    capacity_list = [5, 10, 20]
+    # capacity_list = [5, 10, 20]
+    capacity_list = [20]
     total_num_records_list = [x * 1000000 for x in capacity_list]
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
@@ -330,7 +332,8 @@ def experiment_on_num_records(pf, repeat):
 
 def experiment_on_replication_factors(pf, repeat):
     # No operations injected
-    replication_factors = [2, 3, 4]
+    # replication_factors = [2, 3, 4]
+    replication_factors = [3, 4]
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
@@ -440,11 +443,11 @@ def main():
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
     # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-    experiment_on_workloads(pf, repeat)
-    experiment_on_num_cassandra_nodes(pf, repeat)
+    # experiment_on_workloads(pf, repeat)
+    # experiment_on_num_cassandra_nodes(pf, repeat)
     experiment_on_num_records(pf, repeat)
     experiment_on_replication_factors(pf, repeat)
-    experiment_on_operations_rate(pf, repeat)
+    # experiment_on_operations_rate(pf, repeat)
     experiment_with_no_compaction(pf, repeat)
 
     # Copy log to result directory
