@@ -74,6 +74,6 @@ set xtics rotate by -90 nomirror
 set ytics nomirror
 
 unset key
-plot "${ORIGINAL}" using (\$1/1000):(\$2/1000) with line ls 1
+plot "${ORIGINAL}" using (\$1/1000):(\$2/1000) with line ls 2
 
 EOF

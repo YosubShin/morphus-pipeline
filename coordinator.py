@@ -4,10 +4,12 @@ import ConfigParser
 from threading import Thread
 import thread
 import sys
+import subprocess
 import profile
 import logging
 import cassandra_log_parser as ps
 import time
+from twilio.rest import TwilioRestClient
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s: '
@@ -20,6 +22,29 @@ logger = logging.getLogger(__name__)
 
 private_config = ConfigParser.SafeConfigParser()
 private_config.read('private.ini')
+tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))
+
+
+class CassandraDeployThread(Thread):
+    def __init__(self, cassandra_path, cassandra_home, seed_host, host, java_path, mutex, output):
+        Thread.__init__(self)
+        self.cassandra_path = cassandra_path
+        self.cassandra_home = cassandra_home
+        self.seed_host = seed_host
+        self.host = host
+        self.java_path = java_path
+        self.mutex = mutex
+        self.output = output
+
+    def run(self):
+        logger.debug('Deploying cassandra at host %s' % self.host)
+        ret = os.system('sh deploy-cassandra-cluster.sh --orig_cassandra_path=%s --cassandra_home=%s '
+                        '--seed_host=%s --dst_host=%s --java_path=%s' %
+                        (self.cassandra_path, self.cassandra_home, self.seed_host, self.host, self.java_path))
+        self.mutex.acquire()
+        self.output.append(ret)
+        self.mutex.release()
+        logger.debug('Finished executing deploy cassandra thread at host %s' % self.host)
 
 
 class YcsbExecuteThread(Thread):
@@ -54,7 +79,7 @@ class YcsbExecuteThread(Thread):
 
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
-                   measurement_type, should_inject_operations, should_reconfigure, should_compact=True):
+                   measurement_type, should_inject_operations, should_reconfigure, should_compact=False):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -84,15 +109,52 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     sleep(10)
 
+    threads = []
+    output = []
+    mutex = thread.allocate_lock()
+
     seed_host = hosts[0]
     # Cleanup, make directories, and run cassandra
     for host in hosts[0:num_cassandra_nodes]:
-        logger.debug('Deploying cassandra at host %s' % host)
         cassandra_home = '%s/%s' % (cassandra_home_base_path, host)
-        ret = os.system('sh deploy-cassandra-cluster.sh --orig_cassandra_path=%s --cassandra_home=%s '
-                        '--seed_host=%s --dst_host=%s --java_path=%s' %
-                        (cassandra_path, cassandra_home, seed_host, host, java_path))
-        sleep(5)
+        if host == seed_host:  # Synchronous execution for the seed host
+            logger.debug('Deploying cassandra at host %s' % host)
+            ret = os.system('sh deploy-cassandra-cluster.sh --orig_cassandra_path=%s --cassandra_home=%s '
+                            '--seed_host=%s --dst_host=%s --java_path=%s' %
+                            (cassandra_path, cassandra_home, seed_host, host, java_path))
+            sleep(5)
+        else:  # Concurrent execution for other hosts
+            current_thread = CassandraDeployThread(cassandra_path, cassandra_home, seed_host, host, java_path, mutex,
+                                                   output)
+            threads.append(current_thread)
+            current_thread.start()
+            sleep(5)
+
+    for t in threads:
+        t.join()
+
+    logger.debug('Cassandra deploy threads finished with outputs: %s...' % output)
+    proc = subprocess.Popen(
+        'ssh %s %s/bin/nodetool status -h %s | grep 10.1.1' % (seed_host, cassandra_path, seed_host),
+        stdout=subprocess.PIPE)
+    host_statuses = {}
+    hosts_down = False
+    while True:
+        line = proc.stdout.readline()
+        if line != '':
+            # the real code does filtering here
+            print line.rstrip()
+            splitted_line = line.split()
+            host = splitted_line[1]
+            up = True if splitted_line[0] == 'UN' else False
+            host_statuses[host] = up
+            if up is False:
+                hosts_down = True
+        else:
+            break
+    if len(host_statuses) != num_cassandra_nodes or hosts_down:
+        logger.error('Cassandra is not deployed correctly!')
+        raise Exception('Cassandra is not deployed correctly! %s' % str(host_statuses))
 
     # Running YCSB load script
     logger.debug('Running YCSB load script')
@@ -165,7 +227,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
         # Run YCSB workload for original schema
         for host in hosts[num_cassandra_nodes:num_cassandra_nodes + num_ycsb_nodes]:
-            current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec,
+            current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex,
+                                               delay_in_millisec,
                                                False, measurement_type)
             threads.append(current_thread)
             current_thread.start()
@@ -174,7 +237,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
         # Run YCSB workload for altered schema
         for host in hosts[num_cassandra_nodes:num_cassandra_nodes + num_ycsb_nodes]:
-            current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex, delay_in_millisec,
+            current_thread = YcsbExecuteThread(pf, host, target_throughput, result_path, output, mutex,
+                                               delay_in_millisec,
                                                True, measurement_type)
             threads.append(current_thread)
             current_thread.start()
@@ -234,11 +298,11 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
 def experiment_on_workloads(pf, repeat):
     workload_parameters = [  # (Workload type, Workload proportions, should_reconfigure)
-        ('uniform', {'read': 4, 'update': 4, 'insert': 2}, True),
-        ('zipfian', {'read': 4, 'update': 4, 'insert': 2}, True),
-        ('latest', {'read': 4, 'update': 4, 'insert': 2}, True),
-        ('uniform', {'read': 10, 'update': 0, 'insert': 0}, True),
-        ('uniform', {'read': 4, 'update': 4, 'insert': 2}, False)
+                             ('uniform', {'read': 4, 'update': 4, 'insert': 2}, True),
+                             ('zipfian', {'read': 4, 'update': 4, 'insert': 2}, True),
+                             ('latest', {'read': 4, 'update': 4, 'insert': 2}, True),
+                             ('uniform', {'read': 10, 'update': 0, 'insert': 0}, True),
+                             ('uniform', {'read': 4, 'update': 4, 'insert': 2}, False)
     ]
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
@@ -428,39 +492,48 @@ def experiment_with_no_compaction(pf, repeat):
 
 
 def main():
-    profile_name = sys.argv[1]
-    pf = profile.get_profile(profile_name)
+    try:
+        profile_name = sys.argv[1]
+        pf = profile.get_profile(profile_name)
 
-    # Cleanup existing result directory and create a new one
-    result_file_name = strftime('%m-%d-%H%M') + '.tar.gz'
-    result_base_path = pf.config.get('path', 'result_base_path')
-    os.system('rm -rf %s;mkdir %s' % (result_base_path, result_base_path))
+        # Cleanup existing result directory and create a new one
+        result_file_name = strftime('%m-%d-%H%M') + '.tar.gz'
+        result_base_path = pf.config.get('path', 'result_base_path')
+        os.system('rm -rf %s;mkdir %s' % (result_base_path, result_base_path))
 
-    repeat = int(pf.config.get('experiment', 'repeat'))
+        repeat = int(pf.config.get('experiment', 'repeat'))
 
-    # Do all experiments here
-    # workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
-    # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
-    # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
+        # Do all experiments here
+        # workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+        # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
+        # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-    # experiment_on_workloads(pf, repeat)
-    # experiment_on_num_cassandra_nodes(pf, repeat)
-    experiment_on_num_records(pf, repeat)
-    experiment_on_replication_factors(pf, repeat)
-    # experiment_on_operations_rate(pf, repeat)
-    experiment_with_no_compaction(pf, repeat)
+        # experiment_on_workloads(pf, repeat)
+        # experiment_on_num_cassandra_nodes(pf, repeat)
+        experiment_on_num_records(pf, repeat)
+        # experiment_on_replication_factors(pf, repeat)
+        # experiment_on_operations_rate(pf, repeat)
+        # experiment_with_no_compaction(pf, repeat)
 
-    # Copy log to result directory
-    os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
+        # Copy log to result directory
+        os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
 
-    # Archive the result and send to remote server
-    os.system('tar -czf /tmp/%s -C %s .'
-              % (result_file_name, result_base_path))
-    private_key_path = pf.config.get('path', 'private_key_path')
-    os.system('scp -o StrictHostKeyChecking=no -P8888 -i %s/sshuser_key /tmp/%s sshuser@104.236.110.182:morphus-cassandra/%s/'
-              % (private_key_path, result_file_name, pf.get_name()))
-    os.system('rm /tmp/%s' % result_file_name)
-
+        # Archive the result and send to remote server
+        os.system('tar -czf /tmp/%s -C %s .'
+                  % (result_file_name, result_base_path))
+        private_key_path = pf.config.get('path', 'private_key_path')
+        os.system(
+            'scp -o StrictHostKeyChecking=no -P8888 -i %s/sshuser_key /tmp/%s sshuser@104.236.110.182:morphus-cassandra/%s/'
+            % (private_key_path, result_file_name, pf.get_name()))
+        os.system('rm /tmp/%s' % result_file_name)
+    except Exception, e:
+        tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
+                           to=private_config.get('personal', 'phone_number'),
+                           body='Exp. failed w/:\n%s' % str(e))
+        raise
+    tc.messages.create(from_=private_config.get('personal', 'twilio_number'),
+                       to=private_config.get('personal', 'phone_number'),
+                       body='Experiment done!')
 
 if __name__ == "__main__":
     main()
