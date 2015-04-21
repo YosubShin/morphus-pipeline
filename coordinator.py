@@ -136,14 +136,14 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     logger.debug('Cassandra deploy threads finished with outputs: %s...' % output)
     proc = subprocess.Popen(
         ['ssh', seed_host, '%s/bin/nodetool status -h %s | grep 10.1.1' % (cassandra_path, seed_host)],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout=subprocess.PIPE)
     host_statuses = {}
     hosts_down = False
     while True:
         line = proc.stdout.readline()
         if line != '':
             # the real code does filtering here
-            print line.rstrip()
+            # print line.rstrip()
             splitted_line = line.split()
             host = splitted_line[1]
             up = True if splitted_line[0] == 'UN' else False
@@ -151,7 +151,9 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
             if up is False:
                 hosts_down = True
         else:
+            proc.stdout.flush()
             break
+
     if len(host_statuses) != num_cassandra_nodes or hosts_down:
         logger.error('Cassandra is not deployed correctly!')
         raise Exception('Cassandra is not deployed correctly! %s' % str(host_statuses))

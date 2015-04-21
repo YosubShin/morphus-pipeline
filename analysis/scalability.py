@@ -48,8 +48,10 @@ default_replication_factor = 3
 # Number of Cassandra Nodes
 raw_df = df[(df['num_records'] == 1000000) & (df['replication_factor'] == default_replication_factor) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
+raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
+raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
 group_by_df = raw_df.groupby('num_cassandra_nodes')
-processed_df = group_by_df['morphus_duration'].agg([np.mean, np.std])
+processed_df = group_by_df['morphus_duration', 'atomicswitchmorphustask_finish_duration', 'insertmorphustask_finish_duration'].agg([np.mean, np.std])
 output_path = '%s/scalability-num-cassandra-nodes.png' % output_dir_path
 csv_path = '%s/scalability-num-cassandra-nodes.csv' % output_dir_path
 processed_df.to_csv(csv_path, header=False)
@@ -59,8 +61,10 @@ os.system('./plot-num-cassandra-nodes-vs-reconfig-time.sh --output_path=%s --csv
 # Replication Factors
 raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == 1000000) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
+raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
+raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
 group_by_df = raw_df.groupby('replication_factor')
-processed_df = group_by_df['morphus_duration'].agg([np.mean, np.std])
+processed_df = group_by_df['morphus_duration', 'atomicswitchmorphustask_finish_duration', 'insertmorphustask_finish_duration'].agg([np.mean, np.std])
 output_path = '%s/scalability-replication-factor.png' % output_dir_path
 csv_path = '%s/scalability-replication-factor.csv' % output_dir_path
 processed_df.to_csv(csv_path, header=False)
@@ -70,8 +74,10 @@ os.system('./plot-replication-factor-vs-reconfig-time.sh --output_path=%s --csv_
 # Number of Records
 raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['replication_factor'] == default_replication_factor) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
+raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
+raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
 group_by_df = raw_df.groupby('num_records')
-processed_df = group_by_df['morphus_duration'].agg([np.mean, np.std])
+processed_df = group_by_df['morphus_duration', 'atomicswitchmorphustask_finish_duration', 'insertmorphustask_finish_duration'].agg([np.mean, np.std])
 output_path = '%s/scalability-num-records.png' % output_dir_path
 csv_path = '%s/scalability-num-records.csv' % output_dir_path
 processed_df.to_csv(csv_path, header=False)
@@ -81,21 +87,11 @@ os.system('./plot-num-records-vs-reconfig-time.sh --output_path=%s --csv_path=%s
 # Operations Rates
 raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == 1000000) & (df['replication_factor'] == default_replication_factor) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
+raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
+raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
 group_by_df = raw_df.groupby('target_throughput')
-processed_df = group_by_df['morphus_duration'].agg([np.mean, np.std])
+processed_df = group_by_df['morphus_duration', 'atomicswitchmorphustask_finish_duration', 'insertmorphustask_finish_duration'].agg([np.mean, np.std])
 output_path = '%s/scalability-operations-rate.png' % output_dir_path
 csv_path = '%s/scalability-operations-rate.csv' % output_dir_path
 processed_df.to_csv(csv_path, header=False)
 os.system('./plot-operations-rate-vs-reconfig-time.sh --output_path=%s --csv_path=%s' % (output_path, csv_path))
-
-
-# # Compaction and no compaction
-# raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['replication_factor'] == default_replication_factor) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
-# raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
-# group_by_df = raw_df.groupby('num_records')
-# processed_df = group_by_df['morphus_duration'].agg([np.mean, np.std])
-# output_path = '%s/scalability-compaction.png' % output_dir_path
-# csv_path = '%s/scalability-num-records.csv' % output_dir_path
-# no_compaction_csv_path = '%s/scalability-num-records-no-compaction.csv' % output_dir_path
-# processed_df.to_csv(no_compaction_csv_path, header=False)
-# os.system('./plot-num-records-vs-reconfig-time-compaction.sh --output_path=%s --csv_path=%s --no_compaction_csv_path=%s' % (output_path, csv_path, no_compaction_csv_path))
