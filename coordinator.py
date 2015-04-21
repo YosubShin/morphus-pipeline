@@ -143,7 +143,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         line = proc.stdout.readline()
         if line != '':
             # the real code does filtering here
-            # print line.rstrip()
+            print line.rstrip()
             splitted_line = line.split()
             host = splitted_line[1]
             up = True if splitted_line[0] == 'UN' else False
@@ -479,11 +479,11 @@ def main():
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-        # experiment_on_workloads(pf, repeat)
-        experiment_on_num_cassandra_nodes(pf, repeat)
-        experiment_on_num_records(pf, repeat)
-        experiment_on_replication_factors(pf, repeat)
-        experiment_on_operations_rate(pf, repeat)
+        experiment_on_workloads(pf, repeat)
+        # experiment_on_num_cassandra_nodes(pf, repeat)
+        # experiment_on_num_records(pf, repeat)
+        # experiment_on_replication_factors(pf, repeat)
+        # experiment_on_operations_rate(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))

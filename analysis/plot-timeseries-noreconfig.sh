@@ -69,11 +69,11 @@ set timefmt "%H:%M:%S"
 set format x "%H:%M:%S"
 # 10 seconds before morphus starts ~ 10 seconds after morphus is over
 set xrange[5:65]
-set yrange[-5:125]
+set yrange[-11:100]
 set xtics rotate by -90 nomirror
 set ytics nomirror
 
 unset key
-plot "${ORIGINAL}" using (\$1/1000):(\$2/1000) with line ls 2
+plot "${ORIGINAL}" using (\$1/1000):(\$2/10000) with line ls 2
 
 EOF

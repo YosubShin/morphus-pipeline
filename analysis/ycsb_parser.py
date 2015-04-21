@@ -92,7 +92,7 @@ def parse_timeseries(buf, type_):
         split = [y.strip() for y in l.split(',')]
         assert len(split) == 3
         time = int(split[1])
-        count = int(float(split[2]))
-        rows.append({'0time': time, '1count': count})
+        latency = int(float(split[2]))
+        rows.append({'0time': time, '1latency': latency})
 
     return pd.DataFrame(rows)

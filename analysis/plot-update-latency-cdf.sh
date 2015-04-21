@@ -35,11 +35,11 @@ set output "${OUTPUT_PATH}"
 
 set xlabel "Insert Latency (ms)"
 set ylabel "Probability"
-set style line 1 lt rgb "#A00000" pt 1 pi 100 lw 2 ps 2
-set style line 2 lt rgb "#00A000" pt 7 pi 100 lw 2 ps 2
-set style line 3 lt rgb "#5060D0" pt 2 pi 100 lw 2 ps 2
-set style line 4 lt rgb "#F25900" pt 9 pi 100 lw 2 ps 2
-set style line 5 lt rgb "#ED0CCB" pt 5 pi 100 lw 2 ps 2
+set style line 1 lt rgb "#A00000" pt 1 pi 10 lw 2 ps 1.5
+set style line 2 lt rgb "#00A000" pt 7 pi 10 lw 2 ps 1.5
+set style line 3 lt rgb "#5060D0" pt 2 pi 10 lw 2 ps 1.5
+set style line 4 lt rgb "#F25900" pt 9 pi 10 lw 2 ps 1.5
+set style line 5 lt rgb "#ED0CCB" pt 5 pi 10 lw 2 ps 1.5
 set   autoscale                        # scale axes automatically
 set logscale x
 set xtic auto                          # set xtics automatically
@@ -50,10 +50,10 @@ set key right bottom
 
 set datafile separator ","
 
-plot    "${UNIFORM}" using 1:2 title 'Uniform' with linespoints ls 2, \
-    	"${LATEST}" using 1:2 title 'Latest' with linespoints ls 3, \
-    	"${ZIPFIAN}" using 1:2 title 'Zipf' with linespoints ls 4, \
-        "${NORECONFIG}" using 1:2 title 'No Reconfiguration' with linespoints ls 5
+plot    "${UNIFORM}" using (\$1/10):2 title 'Uniform' with linespoints ls 2, \
+    	"${LATEST}" using (\$1/10):2 title 'Latest' with linespoints ls 3, \
+    	"${ZIPFIAN}" using (\$1/10):2 title 'Zipf' with linespoints ls 4, \
+        "${NORECONFIG}" using (\$1/10):2 title 'No Reconfiguration' with linespoints ls 5
 
 EOF
 
