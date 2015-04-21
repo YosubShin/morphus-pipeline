@@ -479,11 +479,11 @@ def main():
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-        experiment_on_workloads(pf, repeat)
-        # experiment_on_num_cassandra_nodes(pf, repeat)
-        # experiment_on_num_records(pf, repeat)
-        # experiment_on_replication_factors(pf, repeat)
-        # experiment_on_operations_rate(pf, repeat)
+        # experiment_on_workloads(pf, repeat)
+        experiment_on_num_cassandra_nodes(pf, repeat)
+        experiment_on_num_records(pf, repeat)
+        experiment_on_replication_factors(pf, repeat)
+        experiment_on_operations_rate(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
