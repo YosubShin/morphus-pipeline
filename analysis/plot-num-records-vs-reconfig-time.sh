@@ -33,6 +33,10 @@ set style data histograms
 set style histogram errorbars gap 2 lw 2
 set style fill pattern 1 border lt -1 
 
+set style line 1 lt rgb "#A00000" pt 1 pi 10 lw 2 ps 1.5
+set style line 2 lt rgb "#00A000" pt 9 pi 10 lw 2 ps 1.5
+set style line 3 lt rgb "#5060D0" pt 2 pi 10 lw 2 ps 1.5
+
 set xlabel "Data Size (GB)"
 set ylabel "Reconfiguration Time (secs)"
 set xtics nomirror
