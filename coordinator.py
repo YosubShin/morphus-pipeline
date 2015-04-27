@@ -10,6 +10,7 @@ import logging
 import cassandra_log_parser as ps
 import time
 from twilio.rest import TwilioRestClient
+import random
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s: '
@@ -171,18 +172,21 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     else:
         workload_proportions = {'read': 10, 'update': 0, 'insert': 0}
 
+    random_salt = random.randrange(1, 1000000)
+
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
     max_execution_time = 60 + 90 * total_num_records / 1000000
     ret = os.system('ssh %s \'sh %s/ycsb-load.sh '
                     '--cassandra_path=%s --ycsb_path=%s '
                     '--base_path=%s --num_records=%d --workload=%s '
                     '--replication_factor=%d --seed_host=%s --hosts=%s --num_threads=%d '
-                    '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d \''
+                    '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d '
+                    '--random_salt=%d\''
                     % (hosts[num_cassandra_nodes], src_path, cassandra_path, ycsb_path,
                        result_path, total_num_records, workload_type,
                        replication_factor, seed_host, cassandra_nodes_hosts, num_ycsb_threads,
                        workload_proportions['read'], workload_proportions['insert'], workload_proportions['update'],
-                       max_execution_time))
+                       max_execution_time, random_salt))
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
@@ -206,6 +210,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'should_inject_operations', should_inject_operations)
     meta.set('config', 'should_reconfigure', should_reconfigure)
     meta.set('config', 'should_compact', should_compact)
+    meta.set('config', 'random_salt', random_salt)
 
     threads = []
     output = []

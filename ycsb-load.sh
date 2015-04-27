@@ -58,6 +58,10 @@ case $i in
     MAX_EXECUTION_TIME="${i#*=}"
     shift
     ;;
+    --random_salt=*)
+    RANDOM_SALT="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -122,6 +126,7 @@ host=${HOSTS}
 port=9042
 
 cassandra.isalteredprimarykey=false
+cassandra.randomsalt=${RANDOM_SALT}
 
 timeseries.granularity=10
 
@@ -151,6 +156,7 @@ host=${HOSTS}
 port=9042
 
 cassandra.isalteredprimarykey=true
+cassandra.randomsalt=${RANDOM_SALT}
 
 timeseries.granularity=10
 

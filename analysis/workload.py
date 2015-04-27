@@ -8,7 +8,7 @@ import ycsb_parser
 import time
 import json
 
-data_base_path = os.path.abspath('../../../experiment/workload')
+data_base_path = os.path.abspath('../../../experiment/workload-3g')
 
 output_dir_name = time.strftime('%m-%d-%H%M')
 output_dir_path = '%s/processed/%s' % (data_base_path, output_dir_name)
@@ -19,6 +19,25 @@ except:
 
 raw_data_root = '%s/raw' % data_base_path
 
+rows = []
+for dir_name in os.listdir(raw_data_root):
+    if re.search('[0-9][0-9]\-[0-9][0-9]\-[0-9][0-9][0-9][0-9]$', dir_name) is not None:
+        cur_dir_path = '%s/%s' % (raw_data_root, dir_name)
+
+        print dir_name
+
+        meta = ConfigParser.SafeConfigParser()
+        meta.read('%s/meta.ini' % cur_dir_path)
+        flat_dict = meta._sections['config']
+        flat_dict.update(meta._sections['result'])
+
+        rows.append(flat_dict)
+
+df = pd.DataFrame(rows)
+df = df.fillna(value={'target_throughput': '0'})
+df = df.fillna(value={'should_compact': 'True'})
+df.to_csv('%s/data.csv' % output_dir_path, index=False)
+
 
 # Plot Read latency CDF
 bucket_dicts = {}
@@ -26,7 +45,7 @@ for dir_name in os.listdir(raw_data_root):
     if re.search('[0-9][0-9]\-[0-9][0-9]\-[0-9][0-9][0-9][0-9]$', dir_name) is not None:
         cur_dir_path = '%s/%s' % (raw_data_root, dir_name)
 
-        print dir_name
+        print 'Read CDF', dir_name
 
         meta = ConfigParser.SafeConfigParser()
         meta.read('%s/meta.ini' % cur_dir_path)
@@ -175,17 +194,22 @@ os.system('./plot-update-latency-cdf.sh --output_path=%s '
           '--uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
           (output_path, uniform_paths[0], latest_paths[0], zipfian_paths[0], noreconfig_paths[0]))
 
+
 # Read timeseries
 for dir_name in os.listdir(raw_data_root):
     if re.search('[0-9][0-9]\-[0-9][0-9]\-[0-9][0-9][0-9][0-9]$', dir_name) is not None:
         cur_dir_path = '%s/%s' % (raw_data_root, dir_name)
 
-        print dir_name
+        print 'Read timeseries', dir_name
 
         meta = ConfigParser.SafeConfigParser()
         meta.read('%s/meta.ini' % cur_dir_path)
         config_dict = meta._sections['config']
         config_dict['result_dir_name'] = dir_name
+
+        if meta.get('config', 'should_reconfigure') == 'True' and not meta.has_option('result', 'MorphusStartAt'):
+            print 'Morphus failed for ', dir_name
+            continue
 
         output_fs = filter(lambda x: x.find('output-') != -1 and x.find('stderr') == -1, os.listdir(cur_dir_path))
         if meta.get('config', 'measurement_type') == 'timeseries':
@@ -201,10 +225,13 @@ for dir_name in os.listdir(raw_data_root):
                 df['0time'] -= morphus_start_at
                 df['1latency'] = df['1latency'].apply(lambda x: -50000 if x < 0 else x)
                 workload_type = meta.get('config', 'workload_type')
-                if json.loads(meta.get('config', 'workload_proportions').replace("'", '"'))['read'] == 10:
+                if meta.get('config', 'should_reconfigure') == 'False':
+                    if json.loads(meta.get('config', 'workload_proportions').replace("'", '"'))['read'] == 10:
+                        workload_type = 'noreconfig-readonly'
+                    else:
+                        workload_type = 'noreconfig-update'
+                elif json.loads(meta.get('config', 'workload_proportions').replace("'", '"'))['read'] == 10:
                     workload_type = 'readonly'
-                elif meta.get('config', 'should_reconfigure') == 'False':
-                    workload_type = 'noreconfig'
                 key = 'original' if fname.find('original') != -1 else 'altered'
                 path = '%s/timeseries-read-%s-%s-%s.csv' % (output_dir_path, workload_type, dir_name, key)
                 df.to_csv(path, header=False, index=False)
@@ -243,12 +270,16 @@ for dir_name in os.listdir(raw_data_root):
     if re.search('[0-9][0-9]\-[0-9][0-9]\-[0-9][0-9][0-9][0-9]$', dir_name) is not None:
         cur_dir_path = '%s/%s' % (raw_data_root, dir_name)
 
-        print dir_name
+        print 'Update timeseries:', dir_name
 
         meta = ConfigParser.SafeConfigParser()
         meta.read('%s/meta.ini' % cur_dir_path)
         config_dict = meta._sections['config']
         config_dict['result_dir_name'] = dir_name
+
+        if meta.get('config', 'should_reconfigure') == 'True' and not meta.has_option('result', 'MorphusStartAt'):
+            print 'Morphus failed for ', dir_name
+            continue
 
         output_fs = filter(lambda x: x.find('output-') != -1 and x.find('stderr') == -1, os.listdir(cur_dir_path))
         if meta.get('config', 'measurement_type') == 'timeseries':
@@ -324,6 +355,9 @@ for dir_name in os.listdir(raw_data_root):
             elif meta.get('config', 'should_reconfigure') == 'False':
                 workload_type = 'noreconfig'
                 continue
+            if not meta.has_option('result', 'CatchupMorphusTask'):
+                continue
+
             duration = int(meta.get('result', 'CatchupMorphusTask')) - int(meta.get('result', 'MorphusStartAt'))
             insert_morphus_task_duration = int(meta.get('result', 'InsertMorphusTask')) - int(
                 meta.get('result', 'MorphusStartAt'))

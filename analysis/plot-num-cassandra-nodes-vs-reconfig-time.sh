@@ -48,7 +48,7 @@ set datafile separator ","
 
 plot "${CSV_PATH}" using 1:(\$2/1000) with linespoints ls 1 ti "Reconfiguration done", \
      "${CSV_PATH}" using 1:(\$2/1000):(\$3/1000) with yerrorbars ls 1 notitle, \
-     "${CSV_PATH}" using 1:(\$4/1000) with linespoints ls 2 ti "Atomic Switch phase done", \
+     "${CSV_PATH}" using 1:(\$4/1000) with linespoints ls 2 ti "Atomic Swap phase done", \
      "${CSV_PATH}" using 1:(\$4/1000):(\$5/1000) with yerrorbars ls 2 notitle, \
      "${CSV_PATH}" using 1:(\$6/1000) with linespoints ls 3 ti "Insert phase done", \
      "${CSV_PATH}" using 1:(\$6/1000):(\$7/1000) with yerrorbars ls 3 notitle
