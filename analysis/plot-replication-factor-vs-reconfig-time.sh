@@ -43,7 +43,7 @@ set xtics nomirror
 set ytics nomirror
 
 set xrange[0.5:4.5]
-#set yrange[:140]
+set yrange[:160]
 
 set datafile separator ","
 

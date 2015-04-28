@@ -8,7 +8,7 @@ import ycsb_parser
 import time
 import json
 
-data_base_path = os.path.abspath('../../../experiment/scalability')
+data_base_path = os.path.abspath('../../../experiment/scalability-3g')
 
 output_dir_name = time.strftime('%m-%d-%H%M')
 output_dir_path = '%s/processed/%s' % (data_base_path, output_dir_name)
@@ -43,10 +43,11 @@ df = df.dropna(subset=['catchupmorphustask'])
 
 default_num_cassandra_nodes = 9
 default_replication_factor = 3
+default_num_records = 3000000
 
 
 # Number of Cassandra Nodes
-raw_df = df[(df['num_records'] == 1000000) & (df['replication_factor'] == default_replication_factor) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
+raw_df = df[(df['num_records'] == default_num_records) & (df['replication_factor'] == default_replication_factor) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
 raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
 raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
@@ -59,7 +60,7 @@ os.system('./plot-num-cassandra-nodes-vs-reconfig-time.sh --output_path=%s --csv
 
 
 # Replication Factors
-raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == 1000000) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
+raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == default_num_records) & (df['should_inject_operations'] == False) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
 raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
 raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
@@ -85,7 +86,7 @@ os.system('./plot-num-records-vs-reconfig-time.sh --output_path=%s --csv_path=%s
 
 
 # Operations Rates
-raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == 1000000) & (df['replication_factor'] == default_replication_factor) & (df['should_compact'] == False)]
+raw_df = df[(df['num_cassandra_nodes'] == default_num_cassandra_nodes) & (df['num_records'] == default_num_records) & (df['replication_factor'] == default_replication_factor) & (df['should_compact'] == False)]
 raw_df['morphus_duration'] = raw_df['catchupmorphustask'] - raw_df['morphusstartat']
 raw_df['atomicswitchmorphustask_finish_duration'] = raw_df['atomicswitchmorphustask'] - raw_df['morphusstartat']
 raw_df['insertmorphustask_finish_duration'] = raw_df['insertmorphustask'] - raw_df['morphusstartat']
