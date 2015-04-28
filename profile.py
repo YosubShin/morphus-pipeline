@@ -42,13 +42,13 @@ class EmulabProfile(BaseProfile):
         return single_node_throughput / 2
 
     def get_max_num_cassandra_nodes(self):
-        return 10
+        return 19
 
     def get_max_num_ycsb_nodes(self):
         return 1
 
     def get_max_allowed_num_ycsb_threads_per_node(self):
-        return 250
+        return 350
 
     def get_max_num_connections_per_cassandra_node(self):
         return 16  # 8 connections per core (according to Solving Big Data Challenges paper) * 4 cores / 2 (two different schemas)

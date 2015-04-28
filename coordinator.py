@@ -344,7 +344,7 @@ def experiment_on_workloads(pf, repeat):
 
 def experiment_on_num_cassandra_nodes(pf, repeat):
     # No operations injected
-    num_cassandra_nodes_list = [3, 5, 7, 9]
+    num_cassandra_nodes_list = [3, 6, 9, 15, 19]
     workload_type = pf.config.get('experiment', 'default_workload_type')
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
@@ -374,7 +374,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
 def experiment_on_num_records(pf, repeat):
     # No operations injected
     # capacity_list = [5, 10, 20]
-    capacity_list = [5, 10, 20]
+    capacity_list = [5, 10, 20, 30]
     total_num_records_list = [x * 1000000 for x in capacity_list]
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
@@ -484,11 +484,11 @@ def main():
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-        experiment_on_workloads(pf, repeat)
-        # experiment_on_num_cassandra_nodes(pf, repeat)
-        # experiment_on_num_records(pf, repeat)
-        # experiment_on_replication_factors(pf, repeat)
-        # experiment_on_operations_rate(pf, repeat)
+        # experiment_on_workloads(pf, repeat)
+        experiment_on_num_cassandra_nodes(pf, repeat)
+        experiment_on_num_records(pf, repeat)
+        experiment_on_replication_factors(pf, repeat)
+        experiment_on_operations_rate(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
