@@ -5,11 +5,9 @@ from threading import Thread
 import thread
 import sys
 import subprocess
-from future.tests.test_requests import write_module
 import profile
 import logging
 import cassandra_log_parser as ps
-import time
 from twilio.rest import TwilioRestClient
 import random
 
