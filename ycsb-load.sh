@@ -87,7 +87,7 @@ create table ycsb.usertable (
     field6 varchar,
     field7 varchar,
     field8 varchar,
-    field9 varchar);
+    field9 varchar) WITH caching = 'none';
 EOF
 
 # Setup keyspace and column family in Cassandra for YCSB workload
