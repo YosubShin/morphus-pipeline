@@ -5,6 +5,7 @@ from threading import Thread
 import thread
 import sys
 import subprocess
+from future.tests.test_requests import write_module
 import profile
 import logging
 import cassandra_log_parser as ps
@@ -80,7 +81,8 @@ class YcsbExecuteThread(Thread):
 
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
-                   measurement_type, should_inject_operations, should_reconfigure, should_compact=False):
+                   measurement_type, should_inject_operations, should_reconfigure,
+                   read_consistency_level, write_consistency_level, should_compact=False):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -92,11 +94,13 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     logger.debug('Executing w/ pf=%s, num_hosts=%d, overall_target_throughput=%d, workload_type=%s, '
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
-                 'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s' %
+                 'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s, '
+                 'read_consistency_level=%s, write_consistency_level=%s' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
-                  should_inject_operations, should_reconfigure, should_compact))
+                  should_inject_operations, should_reconfigure, should_compact,
+                  read_consistency_level, write_consistency_level))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -181,12 +185,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                     '--base_path=%s --num_records=%d --workload=%s '
                     '--replication_factor=%d --seed_host=%s --hosts=%s --num_threads=%d '
                     '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d '
-                    '--random_salt=%d\''
+                    '--random_salt=%d --read_consistency_level=%s --write_consistency_level=%s\''
                     % (hosts[num_cassandra_nodes], src_path, cassandra_path, ycsb_path,
                        result_path, total_num_records, workload_type,
                        replication_factor, seed_host, cassandra_nodes_hosts, num_ycsb_threads,
                        workload_proportions['read'], workload_proportions['insert'], workload_proportions['update'],
-                       max_execution_time, random_salt))
+                       max_execution_time, random_salt, read_consistency_level, write_consistency_level))
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
@@ -211,6 +215,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'should_reconfigure', should_reconfigure)
     meta.set('config', 'should_compact', should_compact)
     meta.set('config', 'random_salt', random_salt)
+    meta.set('config', 'read_consistency_level', read_consistency_level)
+    meta.set('config', 'write_consistency_level', write_consistency_level)
 
     threads = []
     output = []
@@ -316,6 +322,8 @@ def experiment_on_workloads(pf, repeat):
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = 'ALL'
 
     for run in range(repeat):
         for workload_type, workload_proportions, should_reconfigure in workload_parameters:
@@ -339,7 +347,9 @@ def experiment_on_workloads(pf, repeat):
                                         workload_proportions=workload_proportions,
                                         measurement_type=measurement_type,
                                         should_inject_operations=True,
-                                        should_reconfigure=should_reconfigure)
+                                        should_reconfigure=should_reconfigure,
+                                        read_consistency_level=read_consistency_level,
+                                        write_consistency_level=write_consistency_level)
 
 
 def experiment_on_num_cassandra_nodes(pf, repeat):
@@ -349,6 +359,8 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
     total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
 
     for run in range(repeat):
         for num_cassandra_nodes in num_cassandra_nodes_list:
@@ -368,7 +380,9 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
                                     workload_proportions=None,
                                     measurement_type=measurement_type,
                                     should_inject_operations=False,
-                                    should_reconfigure=True)
+                                    should_reconfigure=True,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level)
 
 
 def experiment_on_num_records(pf, repeat):
@@ -380,6 +394,8 @@ def experiment_on_num_records(pf, repeat):
     workload_type = pf.config.get('experiment', 'default_workload_type')
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
 
     for run in range(repeat):
         for total_num_records in total_num_records_list:
@@ -399,7 +415,9 @@ def experiment_on_num_records(pf, repeat):
                                     workload_proportions=None,
                                     measurement_type=measurement_type,
                                     should_inject_operations=False,
-                                    should_reconfigure=True)
+                                    should_reconfigure=True,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level)
 
 
 def experiment_on_replication_factors(pf, repeat):
@@ -409,6 +427,8 @@ def experiment_on_replication_factors(pf, repeat):
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     workload_type = pf.config.get('experiment', 'default_workload_type')
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
 
     for run in range(repeat):
         for replication_factor in replication_factors:
@@ -428,7 +448,9 @@ def experiment_on_replication_factors(pf, repeat):
                                     workload_proportions=None,
                                     measurement_type=measurement_type,
                                     should_inject_operations=False,
-                                    should_reconfigure=True)
+                                    should_reconfigure=True,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level)
 
 
 def experiment_on_operations_rate(pf, repeat):
@@ -444,6 +466,8 @@ def experiment_on_operations_rate(pf, repeat):
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
 
     for run in range(repeat):
         for should_inject_operations, overall_target_throughput in experiment_parameters:
@@ -464,7 +488,9 @@ def experiment_on_operations_rate(pf, repeat):
                                     workload_proportions=workload_proportions,
                                     measurement_type=measurement_type,
                                     should_inject_operations=should_inject_operations,
-                                    should_reconfigure=True)
+                                    should_reconfigure=True,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level)
 
 
 def main():

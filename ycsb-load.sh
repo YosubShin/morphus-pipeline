@@ -62,6 +62,14 @@ case $i in
     RANDOM_SALT="${i#*=}"
     shift
     ;;
+    --read_consistency_level=*)
+    READ_CONSISTENCY_LEVEL="${i#*=}"
+    shift
+    ;;
+    --write_consistency_level=*)
+    WRITE_CONSISTENCY_LEVEL="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -87,8 +95,9 @@ create table ycsb.usertable (
     field6 varchar,
     field7 varchar,
     field8 varchar,
-    field9 varchar) WITH caching = 'none';
+    field9 varchar);
 EOF
+#    field9 varchar) WITH caching = 'none';
 
 # Setup keyspace and column family in Cassandra for YCSB workload
 ${CASSANDRA_PATH}/bin/cqlsh --file=/tmp/cql_input.txt ${SEED_HOST}
@@ -130,6 +139,9 @@ cassandra.randomsalt=${RANDOM_SALT}
 
 timeseries.granularity=10
 
+cassandra.readconsistencylevel=${READ_CONSISTENCY_LEVEL}
+cassandra.writeconsistencylevel=${WRITE_CONSISTENCY_LEVEL}
+
 EOF
 
 # Create YCSB workload file for altered schema
@@ -159,6 +171,9 @@ cassandra.isalteredprimarykey=true
 cassandra.randomsalt=${RANDOM_SALT}
 
 timeseries.granularity=10
+
+cassandra.readconsistencylevel=${READ_CONSISTENCY_LEVEL}
+cassandra.writeconsistencylevel=${WRITE_CONSISTENCY_LEVEL}
 
 EOF
 
