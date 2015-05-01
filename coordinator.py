@@ -364,7 +364,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = pf.config.get('experiment', 'default_operations_rate')
+    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
 
     for run in range(repeat):
         for num_cassandra_nodes in num_cassandra_nodes_list:
@@ -401,7 +401,7 @@ def experiment_on_num_records(pf, repeat):
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = pf.config.get('experiment', 'default_operations_rate')
+    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
 
     for run in range(repeat):
         for total_num_records in total_num_records_list:
@@ -436,7 +436,7 @@ def experiment_on_replication_factors(pf, repeat):
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = pf.config.get('experiment', 'default_operations_rate')
+    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
 
     for run in range(repeat):
         for replication_factor in replication_factors:
