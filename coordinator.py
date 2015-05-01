@@ -363,8 +363,9 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
-    workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
+    should_inject_operations = False
+    workload_proportions = None
+    operations_rate = None
 
     for run in range(repeat):
         for num_cassandra_nodes in num_cassandra_nodes_list:
@@ -383,7 +384,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
                                     total_num_ycsb_threads=total_num_ycsb_threads,
                                     workload_proportions=workload_proportions,
                                     measurement_type=measurement_type,
-                                    should_inject_operations=True,
+                                    should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
                                     write_consistency_level=write_consistency_level)
@@ -400,8 +401,9 @@ def experiment_on_num_records(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
-    workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
+    should_inject_operations = False
+    workload_proportions = None
+    operations_rate = None
 
     for run in range(repeat):
         for total_num_records in total_num_records_list:
@@ -420,7 +422,7 @@ def experiment_on_num_records(pf, repeat):
                                     total_num_ycsb_threads=total_num_ycsb_threads,
                                     workload_proportions=workload_proportions,
                                     measurement_type=measurement_type,
-                                    should_inject_operations=True,
+                                    should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
                                     write_consistency_level=write_consistency_level)
@@ -435,8 +437,9 @@ def experiment_on_replication_factors(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
-    workload_proportions = pf.get_default_workload_proportions()
-    operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
+    should_inject_operations = False
+    workload_proportions = None
+    operations_rate = None
 
     for run in range(repeat):
         for replication_factor in replication_factors:
@@ -455,7 +458,7 @@ def experiment_on_replication_factors(pf, repeat):
                                     total_num_ycsb_threads=total_num_ycsb_threads,
                                     workload_proportions=workload_proportions,
                                     measurement_type=measurement_type,
-                                    should_inject_operations=True,
+                                    should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
                                     write_consistency_level=write_consistency_level)
