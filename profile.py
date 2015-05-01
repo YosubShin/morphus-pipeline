@@ -53,6 +53,9 @@ class EmulabProfile(BaseProfile):
     def get_max_num_connections_per_cassandra_node(self):
         return 16  # 8 connections per core (according to Solving Big Data Challenges paper) * 4 cores / 2 (two different schemas)
 
+    def get_default_workload_proportions(self):
+        return {'read': 4, 'update': 4, 'insert': 2}
+
 
 
 def get_profile(profile_name):

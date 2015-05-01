@@ -69,7 +69,7 @@ set timefmt "%H:%M:%S"
 set format x "%H:%M:%S"
 # 10 seconds before morphus starts ~ 10 seconds after morphus is over
 set xrange[5:65]
-set yrange[-11:80]
+set yrange[-11:380]
 set xtics rotate by -90 nomirror
 set ytics nomirror
 
