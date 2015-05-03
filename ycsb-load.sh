@@ -178,4 +178,4 @@ cassandra.writeconsistencylevel=${WRITE_CONSISTENCY_LEVEL}
 EOF
 
 # Load YCSB Workload
-${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=2000 > ${BASE_PATH}/load-output.txt
+${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=2000 -p cassandra.writeconsistencylevel=ONE > ${BASE_PATH}/load-output.txt
