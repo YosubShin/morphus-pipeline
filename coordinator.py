@@ -316,6 +316,7 @@ def experiment_on_workloads(pf, repeat):
                              ('uniform', {'read': 4, 'update': 4, 'insert': 2}, True),
                              ('zipfian', {'read': 4, 'update': 4, 'insert': 2}, True),
                              ('latest', {'read': 4, 'update': 4, 'insert': 2}, True),
+                             ('latest', {'read': 4, 'update': 4, 'insert': 2}, False),
                              ('uniform', {'read': 10, 'update': 0, 'insert': 0}, True),  # Read only
                              ('uniform', {'read': 10, 'update': 0, 'insert': 0}, False),  # No reconfig(read only)
                              ('uniform', {'read': 4, 'update': 4, 'insert': 2}, False)  # No reconfig(uniform)
