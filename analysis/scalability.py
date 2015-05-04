@@ -8,7 +8,7 @@ import ycsb_parser
 import time
 import json
 
-data_base_path = os.path.abspath('../../../experiment/scalability-3g')
+data_base_path = os.path.abspath('../../../experiment/scalability-10g')
 
 output_dir_name = time.strftime('%m-%d-%H%M')
 output_dir_path = '%s/processed/%s' % (data_base_path, output_dir_name)
@@ -43,7 +43,7 @@ df = df.dropna(subset=['catchupmorphustask'])
 
 default_num_cassandra_nodes = 9
 default_replication_factor = 3
-default_num_records = 3000000
+default_num_records = 10000000
 
 
 # Number of Cassandra Nodes
