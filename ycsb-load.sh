@@ -109,13 +109,13 @@ if [ ! -f ${BASE_PATH} ]; then
     mkdir ${BASE_PATH}
 fi
 
-OPERATION_COUNT="$((${MAX_EXECUTION_TIME} * 1000000))"
+OPERATION_COUNT="$((${MAX_EXECUTION_TIME} * 10000))"
 
 # Create YCSB workload file
 cat > ${BASE_PATH}/workload.txt <<EOF
 recordcount=${NUM_RECORDS}
 
-operationcount= ${OPERATION_COUNT}
+operationcount=${OPERATION_COUNT}
 maxexecutiontime=${MAX_EXECUTION_TIME}
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
@@ -148,7 +148,7 @@ EOF
 cat > ${BASE_PATH}/workload-altered.txt <<EOF
 recordcount=${NUM_RECORDS}
 
-operationcount= ${OPERATION_COUNT}
+operationcount=${OPERATION_COUNT}
 maxexecutiontime=${MAX_EXECUTION_TIME}
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
