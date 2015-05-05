@@ -195,7 +195,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
     # max_execution_time = 60 + 90 * total_num_records / 1000000
-    default_execution_time = 900
+    default_execution_time = 600
     default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
@@ -208,7 +208,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     if replication_factor != default_replication_factor:
         max_execution_time *= 1.0 * replication_factor / default_replication_factor
     if overall_target_throughput is not None:
-        max_execution_time *= 1.0 * math.log(4 * overall_target_throughput / default_operations_rate, 2)
+        # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
+        max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
 
     max_execution_time = int(1.2 * max_execution_time)
 
