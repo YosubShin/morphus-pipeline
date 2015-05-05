@@ -42,8 +42,8 @@ set ylabel "Reconfiguration Time (secs)"
 set xtics nomirror
 set ytics nomirror
 
-set xrange[0:31]
-set yrange[0:2200]
+#set xrange[0:31]
+#set yrange[0:2200]
 
 set datafile separator ","
 

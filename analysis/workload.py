@@ -8,7 +8,7 @@ import ycsb_parser
 import time
 import json
 
-data_base_path = os.path.abspath('../../../experiment/workload-10g-strong-consistency')
+data_base_path = os.path.abspath('../../../experiment/workload')
 
 output_dir_name = time.strftime('%m-%d-%H%M')
 output_dir_path = '%s/processed/%s' % (data_base_path, output_dir_name)
@@ -375,7 +375,7 @@ for dir_name in os.listdir(raw_data_root):
 
             df = pd.DataFrame(rows)
             groupby = df.groupby('workload_type')
-            df = groupby.agg([np.mean, np.std])
+            df = groupby.agg([np.mean])
             df.to_csv('%s/reconfiguration-time.csv' % output_dir_path)
 
 # Read & Update Timeseries
@@ -441,7 +441,7 @@ for dir_name in os.listdir(raw_data_root):
             f_buf = f.read()
             for rw in rws:
                 df = ycsb_parser.parse_timeseries(f_buf, rw)
-                # print cur_dir_path, fname, rw, df
+                # print cur_dir_path, fname, rw, df.describe()
                 if not should_reconfigure:
                     abs_morphus_start_at = df['0time'].iloc[0] + 10000
                 df['0time'] -= abs_morphus_start_at

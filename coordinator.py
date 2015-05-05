@@ -10,6 +10,8 @@ import logging
 import cassandra_log_parser as ps
 from twilio.rest import TwilioRestClient
 import random
+import time
+import math
 
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s: '
@@ -23,6 +25,21 @@ logger = logging.getLogger(__name__)
 private_config = ConfigParser.SafeConfigParser()
 private_config.read('private.ini')
 tc = TwilioRestClient(private_config.get('twilio', 'account_sid'), private_config.get('twilio', 'auth_token'))
+
+
+class NodeFailureThread(Thread):
+    def __init__(self, abs_fail_at, failed_node):
+        Thread.__init__(self)
+        self.abs_fail_at = abs_fail_at
+        self.failed_node = failed_node
+
+    def run(self):
+        while (time.time() * 1000) < self.abs_fail_at:
+            sleep(1)
+        logger.debug('Failing cassandra at host %s' % self.failed_node)
+        os.system('ssh %s ps aux | grep cassandra | grep -v grep | grep java | awk \'{print $2}\' | '
+                  'xargs ssh %s kill -9' % (self.failed_node, self.failed_node))
+        logger.debug('Finished killing cassandra thread at host %s' % self.failed_node)
 
 
 class CassandraDeployThread(Thread):
@@ -80,7 +97,7 @@ class YcsbExecuteThread(Thread):
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
                    measurement_type, should_inject_operations, should_reconfigure,
-                   read_consistency_level, write_consistency_level, should_compact=False):
+                   read_consistency_level, write_consistency_level, should_compact=False, fail_at=None):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -93,12 +110,12 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
                  'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s, '
-                 'read_consistency_level=%s, write_consistency_level=%s' %
+                 'read_consistency_level=%s, write_consistency_level=%s, fail_at=%d' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
                   should_inject_operations, should_reconfigure, should_compact,
-                  read_consistency_level, write_consistency_level))
+                  read_consistency_level, write_consistency_level, int(fail_at or -1)))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -178,10 +195,11 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
     # max_execution_time = 60 + 90 * total_num_records / 1000000
-    default_execution_time = 600
+    default_execution_time = 700
     default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    default_operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
     max_execution_time = default_execution_time
     if num_cassandra_nodes != default_num_cassandra_nodes:
         max_execution_time *= 1.0 * default_num_cassandra_nodes / num_cassandra_nodes
@@ -189,6 +207,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         max_execution_time *= 1.0 * total_num_records / default_total_num_records
     if replication_factor != default_replication_factor:
         max_execution_time *= 1.0 * replication_factor / default_replication_factor
+    if overall_target_throughput is not None:
+        max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
 
     max_execution_time = int(1.2 * max_execution_time)
 
@@ -229,6 +249,15 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'random_salt', random_salt)
     meta.set('config', 'read_consistency_level', read_consistency_level)
     meta.set('config', 'write_consistency_level', write_consistency_level)
+    meta.set('config', 'max_execution_time', max_execution_time)
+    abs_fail_at = None
+    failed_host = None
+    if fail_at is not None:
+        abs_fail_at = int(time.time() * 1000) + fail_at
+        # Fail 'fail_at' milliseconds after now
+        meta.set('config', 'fail_at', abs_fail_at)
+        failed_host = hosts[random.randint(1, num_cassandra_nodes - 1)]
+        meta.set('config', 'failed_host', failed_host)
 
     threads = []
     output = []
@@ -280,6 +309,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         logger.debug('No operations are being injected, and instead sleep for %s seconds' % max_execution_time)
         sleep(max_execution_time)
     else:
+        if abs_fail_at is not None:
+            NodeFailureThread(abs_fail_at, failed_host)
         for t in threads:
             t.join()
 
@@ -505,6 +536,42 @@ def experiment_on_operations_rate(pf, repeat):
                                     write_consistency_level=write_consistency_level)
 
 
+def experiment_on_failure(pf, repeat):
+    workload_type = pf.config.get('experiment', 'default_workload_type')
+    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = 'ONE'
+    fail_ats = [x * 60 * 1000 for x in range(6, 9)]
+
+    for run in range(repeat):
+        for fail_at in fail_ats:
+            for measurement_type in ['histogram', 'timeseries']:
+                total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+                num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+                logger.debug('Fail Node at time=%d' % fail_at)
+
+                result = run_experiment(pf,
+                                        hosts=pf.get_hosts(),
+                                        overall_target_throughput=target_throughput,
+                                        total_num_records=total_num_records,
+                                        workload_type=workload_type,
+                                        replication_factor=replication_factor,
+                                        num_cassandra_nodes=num_cassandra_nodes,
+                                        num_ycsb_nodes=num_ycsb_nodes,
+                                        total_num_ycsb_threads=total_num_ycsb_threads,
+                                        workload_proportions=workload_proportions,
+                                        measurement_type=measurement_type,
+                                        should_inject_operations=True,
+                                        should_reconfigure=True,
+                                        read_consistency_level=read_consistency_level,
+                                        write_consistency_level=write_consistency_level,
+                                        fail_at=fail_at)
+
+
 def main():
     try:
         profile_name = sys.argv[1]
@@ -527,6 +594,8 @@ def main():
         experiment_on_num_records(pf, repeat)
         # experiment_on_replication_factors(pf, repeat)
         experiment_on_operations_rate(pf, repeat)
+
+        # experiment_on_failure(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
