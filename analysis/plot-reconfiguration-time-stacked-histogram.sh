@@ -21,12 +21,20 @@ gnuplot << EOF
 set terminal pngcairo font 'Times,20' linewidth 2 size 15in,9in 
 set output "${OUTPUT_PATH}"
 
+set style line 2 lc rgb 'black' lt 1 lw 1
+set grid y
+
+set style data histograms
 set style histogram columnstacked
+
+set boxwidth 0.5
+set style fill pattern border -1
+
 set key noinvert box
 set yrange [0:*]
 
 set xlabel "Workload type"
-set ylabel "Phase duration (ms)"
+set ylabel "Reconfiguration time (sec)"
 
 set tics scale 0.0
 set ytics
@@ -35,9 +43,9 @@ set xtics norotate nomirror
 
 set datafile separator ","
 
-plot    '${INPUT_PATH}' using 6 ti col, \
-        '' using 12 ti col, \
-        '' using 13 ti col, \
-        '' using 14:key(1) ti col
+plot    '${INPUT_PATH}' using 3 ti col, \
+        '' using 4 ti col, \
+        '' using 5 ti col, \
+        '' using 6:key(1) ti col
 
 EOF

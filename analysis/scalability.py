@@ -8,7 +8,7 @@ import ycsb_parser
 import time
 import json
 
-data_base_path = os.path.abspath('../../../experiment/scalability-10g')
+data_base_path = os.path.abspath('../../../experiment/scalability')
 
 output_dir_name = time.strftime('%m-%d-%H%M')
 output_dir_path = '%s/processed/%s' % (data_base_path, output_dir_name)
