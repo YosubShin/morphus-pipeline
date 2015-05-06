@@ -324,7 +324,7 @@ for dir_name in os.listdir(raw_data_root):
 
                 # Read & Write Timeseries
                 key = 'original' if fname.find('original') != -1 else 'altered'
-                path = '%s/timeseries-read-%s-%s-%s.csv' % (output_dir_path, workload_type, dir_name, key)
+                path = '%s/timeseries-%s-%s-%s-%s.csv' % (output_dir_path, rw, workload_type, dir_name, key)
                 df.to_csv(path, header=False, index=False)
                 paths[rw][key] = path
 

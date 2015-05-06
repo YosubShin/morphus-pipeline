@@ -34,6 +34,7 @@ class NodeFailureThread(Thread):
         self.failed_node = failed_node
 
     def run(self):
+        logger.debug('Reserve failure of %s at time %d', self.failed_node, self.abs_fail_at)
         while (time.time() * 1000) < self.abs_fail_at:
             sleep(1)
         logger.debug('Failing cassandra at host %s' % self.failed_node)
@@ -311,7 +312,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         sleep(max_execution_time)
     else:
         if abs_fail_at is not None:
-            NodeFailureThread(abs_fail_at, failed_host)
+            NodeFailureThread(abs_fail_at, failed_host).start()
         for t in threads:
             t.join()
 
