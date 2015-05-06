@@ -47,6 +47,8 @@ rm -rf ${CASSANDRA_HOME}
 echo "# Making a new Cassandra directory and copying Cassandra binary..."
 mkdir ${CASSANDRA_HOME} ${CASSANDRA_HOME}/data ${CASSANDRA_HOME}/log ${CASSANDRA_HOME}/commitlog ${CASSANDRA_HOME}/saved_caches
 cp -r ${ORIG_CASSANDRA_PATH} ${CASSANDRA_HOME}/cassandra
+rm -rf /var/lib/cassandra/commitlog
+mkdir /var/lib/cassandra /var/lib/cassandra/commitlog
 
 echo "# Updating cassandra.yaml config file to customize for the host ${DST_HOST}..."
 bash -c "cat > ${CASSANDRA_HOME}/cassandra/conf/cassandra.yaml" <<-EOF
@@ -64,7 +66,7 @@ bash -c "cat > ${CASSANDRA_HOME}/cassandra/conf/cassandra.yaml" <<-EOF
     partitioner: org.apache.cassandra.dht.Murmur3Partitioner
     data_file_directories:
         - ${CASSANDRA_HOME}/data
-    commitlog_directory: ${CASSANDRA_HOME}/commitlog
+    commitlog_directory: /var/lib/cassandra/commitlog
     disk_failure_policy: stop
     commit_failure_policy: stop
     key_cache_size_in_mb:
