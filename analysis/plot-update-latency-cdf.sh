@@ -45,15 +45,15 @@ set logscale x
 set xtic auto                          # set xtics automatically
 set ytic auto                          # set ytics automatically
 set yrange [0:1]
-set xrange [1:100]
+set xrange [1:200]
 set key right bottom
 
 set datafile separator ","
 
-plot    "${UNIFORM}" using (\$1/10):2 title 'Uniform' with linespoints ls 2, \
-    	"${LATEST}" using (\$1/10):2 title 'Latest' with linespoints ls 3, \
-    	"${ZIPFIAN}" using (\$1/10):2 title 'Zipf' with linespoints ls 4, \
-        "${NORECONFIG}" using (\$1/10):2 title 'No Reconfiguration' with linespoints ls 5
+plot    "${UNIFORM}" using (\$1/1000):2 title 'Uniform' with linespoints ls 2, \
+    	"${LATEST}" using (\$1/1000):2 title 'Latest' with linespoints ls 3, \
+    	"${ZIPFIAN}" using (\$1/1000):2 title 'Zipf' with linespoints ls 4, \
+        "${NORECONFIG}" using (\$1/1000):2 title 'No Reconfiguration' with linespoints ls 5
 
 EOF
 

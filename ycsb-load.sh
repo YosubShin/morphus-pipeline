@@ -137,7 +137,7 @@ port=9042
 cassandra.isalteredprimarykey=false
 cassandra.randomsalt=${RANDOM_SALT}
 
-timeseries.granularity=10
+timeseries.granularity=1
 
 cassandra.readconsistencylevel=${READ_CONSISTENCY_LEVEL}
 cassandra.writeconsistencylevel=${WRITE_CONSISTENCY_LEVEL}
@@ -170,7 +170,7 @@ port=9042
 cassandra.isalteredprimarykey=true
 cassandra.randomsalt=${RANDOM_SALT}
 
-timeseries.granularity=10
+timeseries.granularity=1
 
 cassandra.readconsistencylevel=${READ_CONSISTENCY_LEVEL}
 cassandra.writeconsistencylevel=${WRITE_CONSISTENCY_LEVEL}

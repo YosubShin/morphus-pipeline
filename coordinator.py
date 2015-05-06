@@ -362,7 +362,7 @@ def experiment_on_workloads(pf, repeat):
 
     for run in range(repeat):
         for workload_type, workload_proportions, should_reconfigure in workload_parameters:
-            for measurement_type in ['histogram', 'timeseries']:
+            for measurement_type in ['timeseries']:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
                 logger.debug('workload_type=%s, workload_proportions=%s, should_reconfigure=%s, num_cassandra_nodes=%d,'
@@ -590,11 +590,11 @@ def main():
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-        # experiment_on_workloads(pf, repeat)
+        experiment_on_workloads(pf, repeat)
         # experiment_on_num_cassandra_nodes(pf, repeat)
-        experiment_on_num_records(pf, repeat)
+        # experiment_on_num_records(pf, repeat)
         # experiment_on_replication_factors(pf, repeat)
-        experiment_on_operations_rate(pf, repeat)
+        # experiment_on_operations_rate(pf, repeat)
 
         # experiment_on_failure(pf, repeat)
 

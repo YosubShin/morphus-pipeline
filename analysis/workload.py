@@ -255,6 +255,7 @@ os.system('./plot-reconfiguration-time-stacked-histogram.sh --input_path=%s --ou
 # Read & Update Timeseries
 # Availability
 # Readonly, Uniform, Zipfian, Latest, Latest(No roconfig)
+bucket_dicts = {'read': {}, 'update': {}}
 availability_dict = {}
 for dir_name in os.listdir(raw_data_root):
     if re.search('[0-9][0-9]\-[0-9][0-9]\-[0-9][0-9][0-9][0-9]$', dir_name) is not None:
@@ -347,6 +348,33 @@ for dir_name in os.listdir(raw_data_root):
                     availability_dict[key] = (availability_tuple[0] + len(succeeded_filtered_df),
                                               availability_tuple[1] + len(filtered_df))
                 # print(key, len(succeeded_filtered_df), len(filtered_df))
+
+                # CDF
+                if not(should_reconfigure
+                       or workload_type == 'noreconfig-readonly'
+                       or workload_type == 'noreconfig-update'):
+                    continue
+
+                aggregate_dict = {}
+
+                def add_to_aggregate_dict(latency):
+                    bucket_value = latency - latency % 100
+                    if bucket_value in aggregate_dict:
+                        aggregate_dict[bucket_value] += 1
+                    else:
+                        aggregate_dict[bucket_value] = 1
+
+                succeeded_filtered_df['1latency'].apply(add_to_aggregate_dict)
+
+                if workload_type not in bucket_dicts[rw]:
+                    bucket_dicts[rw][workload_type] = aggregate_dict
+                else:
+                    for key in aggregate_dict.keys():
+                        dest_dict = bucket_dicts[rw][workload_type]
+                        if key in dest_dict:
+                            dest_dict[key] += aggregate_dict[key]
+                        else:
+                            dest_dict[key] = aggregate_dict[key]
             f.close()
 
         for rw in rws:
@@ -360,6 +388,7 @@ for dir_name in os.listdir(raw_data_root):
                       (plot_file, rw, output_path, paths[rw]['original'], paths[rw]['altered'], morphus_start_at,
                        insert_morphus_task, atomicswitch_morphus_task, catchup_morphus_task))
 
+# Save availability fractions csv file
 rows = []
 for w, t in availability_dict.iteritems():
     rows.append({'workload_type': w, 'success_count': t[0], 'operations_count': t[1], 'availability': 100.0 * t[0] / t[1]})
@@ -367,3 +396,50 @@ for w, t in availability_dict.iteritems():
 df = pd.DataFrame(rows)
 path = '%s/availability.csv' % output_dir_path
 df.to_csv(path, index=False)
+
+# Save csv files for CDF for each workload
+for rw in bucket_dicts.keys():
+    for workload_type in bucket_dicts[rw].keys():
+        aggregate_dict = bucket_dicts[rw][workload_type]
+        total_num_operations = reduce(lambda x, y: x + y, aggregate_dict.values())
+        for key in aggregate_dict.keys():
+            aggregate_dict[key] = float(aggregate_dict[key]) / total_num_operations
+        rows = []
+        for i, key in enumerate(sorted(aggregate_dict.keys())):
+            if i == 0:
+                rows.append({'0latency': key, '1cumulative': aggregate_dict[key]})
+            else:
+                cum = rows[i - 1]['1cumulative'] + aggregate_dict[key]
+                rows.append({'0latency': key, '1cumulative': cum})
+        df = pd.DataFrame(rows)
+        df.to_csv('%s/histogram-%s-%s.csv' % (output_dir_path, rw, workload_type), header=False,
+                  index=False)
+
+# Plot Read CDF
+paths = filter(lambda x: re.search('.*histogram\-read\-.*\.csv', x) is not None,
+               ['%s/%s' % (output_dir_path, x) for x in os.listdir(output_dir_path)])
+readonly_paths = filter(lambda x: x.find('read-readonly') != -1, paths)
+uniform_paths = filter(lambda x: x.find('uniform') != -1, paths)
+latest_paths = filter(lambda x: x.find('latest') != -1, paths)
+zipfian_paths = filter(lambda x: x.find('zipfian') != -1, paths)
+noreconfig_paths = filter(lambda x: x.find('noreconfig-readonly') != -1, paths)
+
+output_path = '%s/read-latency-cdf.png' % output_dir_path
+
+os.system('./plot-read-latency-cdf.sh --output_path=%s '
+          '--readonly=%s --uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
+          (output_path, readonly_paths[0], uniform_paths[0], latest_paths[0], zipfian_paths[0], noreconfig_paths[0]))
+
+# Plot Update CDF
+paths = filter(lambda x: re.search('.*histogram\-update\-.*\.csv', x) is not None,
+               ['%s/%s' % (output_dir_path, x) for x in os.listdir(output_dir_path)])
+uniform_paths = filter(lambda x: x.find('uniform') != -1, paths)
+latest_paths = filter(lambda x: x.find('latest') != -1, paths)
+zipfian_paths = filter(lambda x: x.find('zipfian') != -1, paths)
+noreconfig_paths = filter(lambda x: x.find('noreconfig') != -1, paths)
+
+output_path = '%s/update-latency-cdf.png' % output_dir_path
+
+os.system('./plot-update-latency-cdf.sh --output_path=%s '
+          '--uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
+          (output_path, uniform_paths[0], latest_paths[0], zipfian_paths[0], noreconfig_paths[0]))

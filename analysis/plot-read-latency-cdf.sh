@@ -43,22 +43,22 @@ set style line 1 lt rgb "#A00000" pt 1 pi 10 lw 2 ps 1.5
 set style line 2 lt rgb "#00A000" pt 7 pi 10 lw 2 ps 1.5
 set style line 3 lt rgb "#5060D0" pt 2 pi 10 lw 2 ps 1.5
 set style line 4 lt rgb "#F25900" pt 9 pi 10 lw 2 ps 1.5
-set style line 5 lt rgb "#ED0CCB" pt 5 pi 10 lw 2 ps 1.5
+set style line 5 lt rgb "#ED0CCB" pt 5 pi 10 lw 2 ps 1.8
 set   autoscale                        # scale axes automatically
 set logscale x
 set xtic auto                          # set xtics automatically
 set ytic auto                          # set ytics automatically
 set yrange [0:1]
-set xrange [1:100]
+set xrange [1:200]
 set key right bottom
 
 set datafile separator ","
 
-plot    "${READONLY}" using (\$1/10):2 title 'No Write' with linespoints ls 1, \
-        "${UNIFORM}" using (\$1/10):2 title 'Uniform' with linespoints ls 2, \
-    	"${LATEST}" using (\$1/10):2 title 'Latest' with linespoints ls 3, \
-    	"${ZIPFIAN}" using (\$1/10):2 title 'Zipf' with linespoints ls 4, \
-    	"${NORECONFIG}" using (\$1/10):2 title 'No Reconfiguration' with linespoints ls 5
+plot  	"${NORECONFIG}" using (\$1/1000):2 title 'No Reconfiguration' with linespoints ls 5, \
+        "${READONLY}" using (\$1/1000):2 title 'No Write' with linespoints ls 1, \
+        "${UNIFORM}" using (\$1/1000):2 title 'Uniform' with linespoints ls 2, \
+    	"${LATEST}" using (\$1/1000):2 title 'Latest' with linespoints ls 3, \
+    	"${ZIPFIAN}" using (\$1/1000):2 title 'Zipf' with linespoints ls 4
 
 EOF
 
