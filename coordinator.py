@@ -547,11 +547,11 @@ def experiment_on_failure(pf, repeat):
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = 'ONE'
-    fail_ats = [x * 60 * 1000 for x in range(6, 9)]
+    fail_ats = [x * 1000 for x in range(300, 350, 10)]
 
     for run in range(repeat):
         for fail_at in fail_ats:
-            for measurement_type in ['histogram', 'timeseries']:
+            for measurement_type in ['timeseries']:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
                 logger.debug('Fail Node at time=%d' % fail_at)
