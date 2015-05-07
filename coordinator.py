@@ -313,7 +313,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     if should_reconfigure:
         logger.debug('Running Morphus script at host %s' % hosts[0])
-        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s","compact":"%s","numMorphusMutationSenderThreads":%d}\' morphous %s %s' %
+        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s","compact":"%s","numMorphusMutationSenderThreads":"%d"}\' morphous %s %s' %
                   (cassandra_path, hosts[0], 'field0', str(should_compact).lower(), num_morphus_mutation_sender_threads, 'ycsb', 'usertable'))
 
     if not should_inject_operations and should_reconfigure:
@@ -646,7 +646,7 @@ def experiment_on_num_morphus_mutation_sender_threads(pf, repeat):
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
-    num_morphus_mutation_sendder_threads_list = [math.pow(2, x) for x in range(2, 6)]
+    num_morphus_mutation_sendder_threads_list = [int(math.pow(2, x)) for x in range(2, 6)]
 
     for run in range(repeat):
         for num_morphus_mutation_sender_threads in num_morphus_mutation_sendder_threads_list:
