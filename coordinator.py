@@ -215,7 +215,10 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
         max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
     if num_morphus_mutation_sender_threads != default_num_morphus_mutation_sender_threads:
-        max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
+        if num_morphus_mutation_sender_threads <= default_num_morphus_mutation_sender_threads:
+            max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
+        else:
+            max_execution_time *= 1.0 / math.log(2.0 * num_morphus_mutation_sender_threads / default_num_morphus_mutation_sender_threads, 2)
 
     max_execution_time = int(1.2 * max_execution_time)
 
