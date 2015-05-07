@@ -98,7 +98,8 @@ class YcsbExecuteThread(Thread):
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
                    measurement_type, should_inject_operations, should_reconfigure,
-                   read_consistency_level, write_consistency_level, should_compact=False, fail_at=None):
+                   read_consistency_level, write_consistency_level, should_compact=False, fail_at=None,
+                   num_update_operations_prior_to=None):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -111,12 +112,13 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
                  'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s, '
-                 'read_consistency_level=%s, write_consistency_level=%s, fail_at=%d' %
+                 'read_consistency_level=%s, write_consistency_level=%s, fail_at=%d, num_update_operations_prior_to=%d' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
                   should_inject_operations, should_reconfigure, should_compact,
-                  read_consistency_level, write_consistency_level, int(fail_at or -1)))
+                  read_consistency_level, write_consistency_level, int(fail_at or -1),
+                  int(num_update_operations_prior_to or -1)))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -195,7 +197,6 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     random_salt = random.randrange(1, 1000000)
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
-    # max_execution_time = 60 + 90 * total_num_records / 1000000
     default_execution_time = 600
     default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
@@ -358,34 +359,34 @@ def experiment_on_workloads(pf, repeat):
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+    measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
-    write_consistency_level = 'ALL'
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
 
     for run in range(repeat):
         for workload_type, workload_proportions, should_reconfigure in workload_parameters:
-            for measurement_type in ['timeseries']:
-                total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
-                num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-                logger.debug('workload_type=%s, workload_proportions=%s, should_reconfigure=%s, num_cassandra_nodes=%d,'
-                             ' total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
-                             % (workload_type, str(workload_proportions), should_reconfigure, num_cassandra_nodes,
-                                total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
+            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+            logger.debug('workload_type=%s, workload_proportions=%s, should_reconfigure=%s, num_cassandra_nodes=%d,'
+                         ' total_num_ycsb_threads=%d, num_ycsb_nodes=%d, total_num_records=%d'
+                         % (workload_type, str(workload_proportions), should_reconfigure, num_cassandra_nodes,
+                            total_num_ycsb_threads, num_ycsb_nodes, total_num_records))
 
-                result = run_experiment(pf,
-                                        hosts=pf.get_hosts(),
-                                        overall_target_throughput=target_throughput,
-                                        total_num_records=total_num_records,
-                                        workload_type=workload_type,
-                                        replication_factor=replication_factor,
-                                        num_cassandra_nodes=num_cassandra_nodes,
-                                        num_ycsb_nodes=num_ycsb_nodes,
-                                        total_num_ycsb_threads=total_num_ycsb_threads,
-                                        workload_proportions=workload_proportions,
-                                        measurement_type=measurement_type,
-                                        should_inject_operations=True,
-                                        should_reconfigure=should_reconfigure,
-                                        read_consistency_level=read_consistency_level,
-                                        write_consistency_level=write_consistency_level)
+            result = run_experiment(pf,
+                                    hosts=pf.get_hosts(),
+                                    overall_target_throughput=target_throughput,
+                                    total_num_records=total_num_records,
+                                    workload_type=workload_type,
+                                    replication_factor=replication_factor,
+                                    num_cassandra_nodes=num_cassandra_nodes,
+                                    num_ycsb_nodes=num_ycsb_nodes,
+                                    total_num_ycsb_threads=total_num_ycsb_threads,
+                                    workload_proportions=workload_proportions,
+                                    measurement_type=measurement_type,
+                                    should_inject_operations=True,
+                                    should_reconfigure=should_reconfigure,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level)
 
 
 def experiment_on_num_cassandra_nodes(pf, repeat):
@@ -572,6 +573,44 @@ def experiment_on_failure(pf, repeat):
                                         read_consistency_level=read_consistency_level,
                                         write_consistency_level=write_consistency_level,
                                         fail_at=fail_at)
+
+
+def experiment_on_precompaction(pf, repeat):
+    workload_type = pf.config.get('experiment', 'default_workload_type')
+    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
+    measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    should_reconfigure = True
+    num_update_operations_prior_to = total_num_records
+
+    for run in range(repeat):
+        for should_compact in [True, False]:
+            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+            logger.debug('inject update operations before running reconfiguration. # update ops=%d, Pre-compaction=%s' % (num_update_operations_prior_to, should_compact))
+
+            result = run_experiment(pf,
+                                    hosts=pf.get_hosts(),
+                                    overall_target_throughput=target_throughput,
+                                    total_num_records=total_num_records,
+                                    workload_type=workload_type,
+                                    replication_factor=replication_factor,
+                                    num_cassandra_nodes=num_cassandra_nodes,
+                                    num_ycsb_nodes=num_ycsb_nodes,
+                                    total_num_ycsb_threads=total_num_ycsb_threads,
+                                    workload_proportions=workload_proportions,
+                                    measurement_type=measurement_type,
+                                    should_inject_operations=True,
+                                    should_reconfigure=should_reconfigure,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level,
+                                    should_compact=should_compact,
+                                    num_update_operations_prior_to=num_update_operations_prior_to)
 
 
 def main():

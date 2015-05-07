@@ -71,7 +71,7 @@ set timefmt "%H:%M:%S"
 set format x "%H:%M:%S"
 # 20 seconds before morphus starts ~ 60 seconds after morphus is over
 set xrange[${MORPHUS_START_AT} / 1000 - 20:(${MORPHUS_START_AT} + ${CATCHUP_MORPHUS_TASK}) / 1000 + 60]
-set yrange[-101:1000]
+set yrange[-101:400]
 set xtics rotate by -90 nomirror
 set ytics nomirror
 set label 4 "Start" rotate by -90
