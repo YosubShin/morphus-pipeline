@@ -98,8 +98,8 @@ class YcsbExecuteThread(Thread):
 def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_num_records, replication_factor,
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
                    measurement_type, should_inject_operations, should_reconfigure,
-                   read_consistency_level, write_consistency_level, should_compact=False, fail_at=None,
-                   num_update_operations_prior_to=None):
+                   read_consistency_level, write_consistency_level, num_morphus_mutation_sender_threads,
+                   should_compact=False, fail_at=None, num_update_operations_prior_to=0):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -112,13 +112,14 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                  'num_records=%d, replication_factor=%d, num_cassandra_nodes=%d, result_dir_name=%s, '
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
                  'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s, '
-                 'read_consistency_level=%s, write_consistency_level=%s, fail_at=%d, num_update_operations_prior_to=%d' %
+                 'read_consistency_level=%s, write_consistency_level=%s, num_morphus_mutation_sender_threads=%d, '
+                 'fail_at=%d, num_update_operations_prior_to=%d' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
                   should_inject_operations, should_reconfigure, should_compact,
-                  read_consistency_level, write_consistency_level, int(fail_at or -1),
-                  int(num_update_operations_prior_to or -1)))
+                  read_consistency_level, write_consistency_level, num_morphus_mutation_sender_threads,
+                  int(fail_at or -1), num_update_operations_prior_to))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -202,6 +203,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     default_operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
+    default_num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
     max_execution_time = default_execution_time
     if num_cassandra_nodes != default_num_cassandra_nodes:
         max_execution_time *= 1.0 * default_num_cassandra_nodes / num_cassandra_nodes
@@ -212,6 +214,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     if overall_target_throughput is not None:
         # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
         max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
+    if num_morphus_mutation_sender_threads != default_num_morphus_mutation_sender_threads:
+        max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
 
     max_execution_time = int(1.2 * max_execution_time)
 
@@ -220,12 +224,14 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                     '--base_path=%s --num_records=%d --workload=%s '
                     '--replication_factor=%d --seed_host=%s --hosts=%s --num_threads=%d '
                     '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d '
-                    '--random_salt=%d --read_consistency_level=%s --write_consistency_level=%s\''
+                    '--random_salt=%d --read_consistency_level=%s --write_consistency_level=%s '
+                    '--num_update_operations_prior_to=%d\''
                     % (hosts[num_cassandra_nodes], src_path, cassandra_path, ycsb_path,
                        result_path, total_num_records, workload_type,
                        replication_factor, seed_host, cassandra_nodes_hosts, num_ycsb_threads,
                        workload_proportions['read'], workload_proportions['insert'], workload_proportions['update'],
-                       max_execution_time, random_salt, read_consistency_level, write_consistency_level))
+                       max_execution_time, random_salt, read_consistency_level, write_consistency_level,
+                       num_update_operations_prior_to))
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
@@ -253,6 +259,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'read_consistency_level', read_consistency_level)
     meta.set('config', 'write_consistency_level', write_consistency_level)
     meta.set('config', 'max_execution_time', max_execution_time)
+    meta.set('config', 'num_morphus_mutation_sender_threads', num_morphus_mutation_sender_threads)
+    meta.set('config', 'num_update_operations_prior_to', num_update_operations_prior_to)
     abs_fail_at = None
     failed_host = None
     if fail_at is not None:
@@ -305,8 +313,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     sleep(30)
     if should_reconfigure:
         logger.debug('Running Morphus script at host %s' % hosts[0])
-        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s","compact":"%s"}\' morphous %s %s' %
-                  (cassandra_path, hosts[0], 'field0', str(should_compact).lower(), 'ycsb', 'usertable'))
+        os.system('%s/bin/nodetool -h %s -m \'{"column":"%s","compact":"%s","numMorphusMutationSenderThreads":%d}\' morphous %s %s' %
+                  (cassandra_path, hosts[0], 'field0', str(should_compact).lower(), num_morphus_mutation_sender_threads, 'ycsb', 'usertable'))
 
     if not should_inject_operations and should_reconfigure:
         logger.debug('No operations are being injected, and instead sleep for %s seconds' % max_execution_time)
@@ -362,6 +370,7 @@ def experiment_on_workloads(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for workload_type, workload_proportions, should_reconfigure in workload_parameters:
@@ -386,7 +395,8 @@ def experiment_on_workloads(pf, repeat):
                                     should_inject_operations=True,
                                     should_reconfigure=should_reconfigure,
                                     read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level)
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def experiment_on_num_cassandra_nodes(pf, repeat):
@@ -401,6 +411,7 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
     should_inject_operations = False
     workload_proportions = None
     operations_rate = None
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for num_cassandra_nodes in num_cassandra_nodes_list:
@@ -422,7 +433,8 @@ def experiment_on_num_cassandra_nodes(pf, repeat):
                                     should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level)
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def experiment_on_num_records(pf, repeat):
@@ -439,6 +451,7 @@ def experiment_on_num_records(pf, repeat):
     should_inject_operations = False
     workload_proportions = None
     operations_rate = None
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for total_num_records in total_num_records_list:
@@ -460,7 +473,8 @@ def experiment_on_num_records(pf, repeat):
                                     should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level)
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def experiment_on_replication_factors(pf, repeat):
@@ -475,6 +489,7 @@ def experiment_on_replication_factors(pf, repeat):
     should_inject_operations = False
     workload_proportions = None
     operations_rate = None
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for replication_factor in replication_factors:
@@ -496,7 +511,8 @@ def experiment_on_replication_factors(pf, repeat):
                                     should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level)
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def experiment_on_operations_rate(pf, repeat):
@@ -514,6 +530,7 @@ def experiment_on_operations_rate(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for should_inject_operations, overall_target_throughput in experiment_parameters:
@@ -536,7 +553,8 @@ def experiment_on_operations_rate(pf, repeat):
                                     should_inject_operations=should_inject_operations,
                                     should_reconfigure=True,
                                     read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level)
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def experiment_on_failure(pf, repeat):
@@ -548,6 +566,7 @@ def experiment_on_failure(pf, repeat):
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
     read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
     write_consistency_level = 'ONE'
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
     fail_ats = [x * 1000 for x in range(300, 350, 10)]
 
     for run in range(repeat):
@@ -572,6 +591,7 @@ def experiment_on_failure(pf, repeat):
                                         should_reconfigure=True,
                                         read_consistency_level=read_consistency_level,
                                         write_consistency_level=write_consistency_level,
+                                        num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads,
                                         fail_at=fail_at)
 
 
@@ -587,6 +607,7 @@ def experiment_on_precompaction(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
     num_update_operations_prior_to = total_num_records
+    num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
 
     for run in range(repeat):
         for should_compact in [True, False]:
@@ -609,8 +630,46 @@ def experiment_on_precompaction(pf, repeat):
                                     should_reconfigure=should_reconfigure,
                                     read_consistency_level=read_consistency_level,
                                     write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads,
                                     should_compact=should_compact,
                                     num_update_operations_prior_to=num_update_operations_prior_to)
+
+
+def experiment_on_num_morphus_mutation_sender_threads(pf, repeat):
+    workload_type = pf.config.get('experiment', 'default_workload_type')
+    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+    replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+    num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+    target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
+    read_consistency_level = pf.config.get('experiment', 'default_read_consistency_level')
+    write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
+    measurement_type = pf.config.get('experiment', 'default_measurement_type')
+    should_reconfigure = True
+    num_morphus_mutation_sendder_threads_list = [math.pow(2, x) for x in range(2, 6)]
+
+    for run in range(repeat):
+        for num_morphus_mutation_sender_threads in num_morphus_mutation_sendder_threads_list:
+            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+            logger.debug('num_morphus_mutation_sender_threads=%d' % num_morphus_mutation_sender_threads)
+
+            result = run_experiment(pf,
+                                    hosts=pf.get_hosts(),
+                                    overall_target_throughput=target_throughput,
+                                    total_num_records=total_num_records,
+                                    workload_type=workload_type,
+                                    replication_factor=replication_factor,
+                                    num_cassandra_nodes=num_cassandra_nodes,
+                                    num_ycsb_nodes=num_ycsb_nodes,
+                                    total_num_ycsb_threads=total_num_ycsb_threads,
+                                    workload_proportions=workload_proportions,
+                                    measurement_type=measurement_type,
+                                    should_inject_operations=True,
+                                    should_reconfigure=should_reconfigure,
+                                    read_consistency_level=read_consistency_level,
+                                    write_consistency_level=write_consistency_level,
+                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads)
 
 
 def main():
@@ -630,13 +689,15 @@ def main():
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, workload_proportions, 'histogram')
         # run_experiment(pf, pf.get_hosts(), 100, 'uniform', 1000000, 1, 3, 1, 48, {'read': 10, 'update': 0, 'insert': 0}, 'timeseries')
 
-        experiment_on_workloads(pf, repeat)
+        # experiment_on_workloads(pf, repeat)
         # experiment_on_num_cassandra_nodes(pf, repeat)
         # experiment_on_num_records(pf, repeat)
         # experiment_on_replication_factors(pf, repeat)
         # experiment_on_operations_rate(pf, repeat)
 
         # experiment_on_failure(pf, repeat)
+
+        experiment_on_num_morphus_mutation_sender_threads(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))

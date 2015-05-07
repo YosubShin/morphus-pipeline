@@ -70,17 +70,15 @@ case $i in
     WRITE_CONSISTENCY_LEVEL="${i#*=}"
     shift
     ;;
+    --num_update_operations_prior_to=*)
+    NUM_UPDATE_OPERATIONS_PRIOR_TO="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
 esac
 done
-
-
-#readproportion=${READ_PROPORTION}
-#updateproportion=${UPDATE_PROPORTION}
-#scanproportion=0
-#insertproportion=${INSERT_PROPORTION}
 
 cat > /tmp/cql_input.txt <<EOF
 create keyspace ycsb WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor': ${REPLICATION_FACTOR} };
@@ -179,3 +177,39 @@ EOF
 
 # Load YCSB Workload
 ${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=2000 -p cassandra.writeconsistencylevel=ONE > ${BASE_PATH}/load-output.txt
+
+if [ "${NUM_UPDATE_OPERATIONS_PRIOR_TO}" -gt "0" ]; then
+cat > ${BASE_PATH}/workload-preexecution.txt <<EOF
+recordcount=${NUM_RECORDS}
+
+operationcount=${NUM_UPDATE_OPERATIONS_PRIOR_TO}
+maxexecutiontime=${MAX_EXECUTION_TIME}
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+
+readallfields=true
+
+readproportion=0
+updateproportion=1
+scanproportion=0
+insertproportion=0
+
+requestdistribution=uniform
+
+threadcount=${NUM_THREADS}
+
+# For CQL client
+host=${HOSTS}
+port=9042
+
+cassandra.isalteredprimarykey=false
+cassandra.randomsalt=${RANDOM_SALT}
+
+cassandra.writeconsistencylevel=ONE
+
+EOF
+
+echo "Executing updates before running reconfiguration. Num update operations=${NUM_UPDATE_OPERATIONS_PRIOR_TO}"
+
+${YCSB_PATH}/bin/ycsb run cassandra-cql -s -P ${BASE_PATH}/workload-preexecution.txt > ${BASE_PATH}/output-preexecution.txt
+
+fi
