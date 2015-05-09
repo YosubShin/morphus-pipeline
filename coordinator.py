@@ -624,7 +624,7 @@ def experiment_on_failure(pf, repeat):
 
 def experiment_on_precompaction(pf, repeat):
     workload_type = pf.config.get('experiment', 'default_workload_type')
-    workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
+    workload_proportions = {'read': 10, 'update': 0, 'insert': 0}
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
@@ -633,9 +633,9 @@ def experiment_on_precompaction(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
     num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
-    total_num_records = 2000000
-    num_pre_reconfig_ops_prior_to = 10000000
-    commitlog_total_space_in_mb = 64
+    total_num_records = 1000000
+    num_pre_reconfig_ops_prior_to = 20000000
+    commitlog_total_space_in_mb = 32
     pre_reconfig_workload_proportions_list = []
 
     for i in range(10, 11, 2):
@@ -661,7 +661,7 @@ def experiment_on_precompaction(pf, repeat):
                                         total_num_ycsb_threads=total_num_ycsb_threads,
                                         workload_proportions=workload_proportions,
                                         measurement_type=measurement_type,
-                                        should_inject_operations=False,
+                                        should_inject_operations=True,
                                         should_reconfigure=should_reconfigure,
                                         read_consistency_level=read_consistency_level,
                                         write_consistency_level=write_consistency_level,
