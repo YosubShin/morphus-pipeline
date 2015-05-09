@@ -99,7 +99,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                    num_cassandra_nodes, num_ycsb_nodes, total_num_ycsb_threads, workload_proportions,
                    measurement_type, should_inject_operations, should_reconfigure,
                    read_consistency_level, write_consistency_level, num_morphus_mutation_sender_threads,
-                   should_compact=False, fail_at=None, num_update_operations_prior_to=0):
+                   should_compact=False, fail_at=None, num_pre_reconfig_ops_prior_to=0, max_execution_time=None,
+                   pre_reconfig_workload_proportions=None, commitlog_total_space_in_mb=1024):
     cassandra_path = pf.config.get('path', 'cassandra_path')
     cassandra_home_base_path = pf.config.get('path', 'cassandra_home_base_path')
     ycsb_path = pf.config.get('path', 'ycsb_path')
@@ -113,13 +114,15 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
                  'num_ycsb_nodes=%d, total_num_ycsb_threads=%d, workload_proportions=%s, measurement_type=%s, '
                  'should_inject_operations=%s, should_reconfigure=%s, should_compact=%s, '
                  'read_consistency_level=%s, write_consistency_level=%s, num_morphus_mutation_sender_threads=%d, '
-                 'fail_at=%d, num_update_operations_prior_to=%d' %
+                 'fail_at=%d, num_pre_reconfig_ops_prior_to=%d, commitlog_total_space_in_mb=%d, max_execution_time=%d, '
+                 'pre_reconfig_workload_proportions=%s' %
                  (pf.get_name(), len(hosts), int(overall_target_throughput or -1), workload_type,
                   total_num_records, replication_factor, num_cassandra_nodes, result_dir_name,
                   num_ycsb_nodes, total_num_ycsb_threads, str(workload_proportions), measurement_type,
                   should_inject_operations, should_reconfigure, should_compact,
                   read_consistency_level, write_consistency_level, num_morphus_mutation_sender_threads,
-                  int(fail_at or -1), num_update_operations_prior_to))
+                  int(fail_at or -1), num_pre_reconfig_ops_prior_to, commitlog_total_space_in_mb,
+                  int(max_execution_time or -1), str(pre_reconfig_workload_proportions or '')))
 
     assert num_cassandra_nodes <= pf.get_max_num_cassandra_nodes()
     assert num_ycsb_nodes <= pf.get_max_num_ycsb_nodes()
@@ -144,8 +147,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         if host == seed_host:  # Synchronous execution for the seed host
             logger.debug('Deploying cassandra at host %s' % host)
             ret = os.system('sh deploy-cassandra-cluster.sh --orig_cassandra_path=%s --cassandra_home=%s '
-                            '--seed_host=%s --dst_host=%s --java_path=%s' %
-                            (cassandra_path, cassandra_home, seed_host, host, java_path))
+                            '--seed_host=%s --dst_host=%s --java_path=%s --commitlog_total_space_in_mb=%d' %
+                            (cassandra_path, cassandra_home, seed_host, host, java_path, commitlog_total_space_in_mb))
             sleep(5)
         else:  # Concurrent execution for other hosts
             current_thread = CassandraDeployThread(cassandra_path, cassandra_home, seed_host, host, java_path, mutex,
@@ -198,40 +201,46 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     random_salt = random.randrange(1, 1000000)
 
     num_ycsb_threads = total_num_ycsb_threads / num_ycsb_nodes
-    default_execution_time = 600
-    default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
-    default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
-    default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
-    default_operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
-    default_num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
-    max_execution_time = default_execution_time
-    if num_cassandra_nodes != default_num_cassandra_nodes:
-        max_execution_time *= 1.0 * default_num_cassandra_nodes / num_cassandra_nodes
-    if total_num_records != default_total_num_records:
-        max_execution_time *= 1.0 * total_num_records / default_total_num_records
-    if replication_factor != default_replication_factor:
-        max_execution_time *= 1.0 * replication_factor / default_replication_factor
-    if overall_target_throughput is not None:
-        # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
-        max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
-    if num_morphus_mutation_sender_threads <= default_num_morphus_mutation_sender_threads:
-        max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
+    if max_execution_time is None:
+        default_execution_time = 600
+        default_num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
+        default_total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
+        default_replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
+        default_operations_rate = int(pf.config.get('experiment', 'default_operations_rate'))
+        default_num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
+        max_execution_time = default_execution_time
+        if num_cassandra_nodes != default_num_cassandra_nodes:
+            max_execution_time *= 1.0 * default_num_cassandra_nodes / num_cassandra_nodes
+        if total_num_records != default_total_num_records:
+            max_execution_time *= 1.0 * total_num_records / default_total_num_records
+        if replication_factor != default_replication_factor:
+            max_execution_time *= 1.0 * replication_factor / default_replication_factor
+        if overall_target_throughput is not None:
+            # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
+            max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
+        if num_morphus_mutation_sender_threads <= default_num_morphus_mutation_sender_threads:
+            max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
 
-    max_execution_time = int(1.2 * max_execution_time)
+        max_execution_time = int(1.2 * max_execution_time)
 
+    if pre_reconfig_workload_proportions is None:
+        pre_reconfig_workload_proportions = {'read': 0, 'insert': 0, 'update': 0}
     ret = os.system('ssh %s \'sh %s/ycsb-load.sh '
                     '--cassandra_path=%s --ycsb_path=%s '
                     '--base_path=%s --num_records=%d --workload=%s '
                     '--replication_factor=%d --seed_host=%s --hosts=%s --num_threads=%d '
                     '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d '
                     '--random_salt=%d --read_consistency_level=%s --write_consistency_level=%s '
-                    '--num_update_operations_prior_to=%d\''
+                    '--num_pre_reconfig_ops_prior_to=%d '
+                    '--pre_reconfig_read_proportion=%d --pre_reconfig_insert_proportion=%d '
+                    '--pre_reconfig_update_proportion=%d\''
                     % (hosts[num_cassandra_nodes], src_path, cassandra_path, ycsb_path,
                        result_path, total_num_records, workload_type,
                        replication_factor, seed_host, cassandra_nodes_hosts, num_ycsb_threads,
                        workload_proportions['read'], workload_proportions['insert'], workload_proportions['update'],
                        max_execution_time, random_salt, read_consistency_level, write_consistency_level,
-                       num_update_operations_prior_to))
+                       num_pre_reconfig_ops_prior_to, pre_reconfig_workload_proportions['read'],
+                       pre_reconfig_workload_proportions['insert'], pre_reconfig_workload_proportions['update']))
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
@@ -260,7 +269,9 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     meta.set('config', 'write_consistency_level', write_consistency_level)
     meta.set('config', 'max_execution_time', max_execution_time)
     meta.set('config', 'num_morphus_mutation_sender_threads', num_morphus_mutation_sender_threads)
-    meta.set('config', 'num_update_operations_prior_to', num_update_operations_prior_to)
+    meta.set('config', 'num_pre_reconfig_ops_prior_to', num_pre_reconfig_ops_prior_to)
+    if pre_reconfig_workload_proportions is not None:
+        meta.set('config', 'pre_reconfig_workload_proportions', pre_reconfig_workload_proportions)
     abs_fail_at = None
     failed_host = None
     if fail_at is not None:
@@ -598,7 +609,6 @@ def experiment_on_failure(pf, repeat):
 def experiment_on_precompaction(pf, repeat):
     workload_type = pf.config.get('experiment', 'default_workload_type')
     workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
-    total_num_records = int(pf.config.get('experiment', 'default_total_num_records'))
     replication_factor = int(pf.config.get('experiment', 'default_replication_factor'))
     num_cassandra_nodes = int(pf.config.get('experiment', 'default_num_cassandra_nodes'))
     target_throughput = int(pf.config.get('experiment', 'default_operations_rate'))
@@ -606,33 +616,45 @@ def experiment_on_precompaction(pf, repeat):
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
-    num_update_operations_prior_to = total_num_records
     num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
+    total_num_records = 1000000
+    num_pre_reconfig_ops_prior_to = 10000000
+    commitlog_total_space_in_mb = 128
+    max_execution_time_in_sec = 600
+    pre_reconfig_workload_proportions_list = []
+    for i in range(0, 11, 2.5):
+        pre_reconfig_workload_proportions_list.append({'read': 0, 'update': i, 'insert': (10 - i)})
 
     for run in range(repeat):
-        for should_compact in [True, False]:
-            total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
-            num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
-            logger.debug('inject update operations before running reconfiguration. # update ops=%d, Pre-compaction=%s' % (num_update_operations_prior_to, should_compact))
+        for pre_reconfig_workload_proportions in pre_reconfig_workload_proportions_list:
+            for should_compact in [True, False]:
+                total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
+                num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
+                logger.debug('inject update operations before running reconfiguration. # update ops=%d, '
+                             'pre_reconfig_workload_proportions=%s, should_compact=%s' %
+                             (num_pre_reconfig_ops_prior_to, str(pre_reconfig_workload_proportions), should_compact))
 
-            result = run_experiment(pf,
-                                    hosts=pf.get_hosts(),
-                                    overall_target_throughput=target_throughput,
-                                    total_num_records=total_num_records,
-                                    workload_type=workload_type,
-                                    replication_factor=replication_factor,
-                                    num_cassandra_nodes=num_cassandra_nodes,
-                                    num_ycsb_nodes=num_ycsb_nodes,
-                                    total_num_ycsb_threads=total_num_ycsb_threads,
-                                    workload_proportions=workload_proportions,
-                                    measurement_type=measurement_type,
-                                    should_inject_operations=True,
-                                    should_reconfigure=should_reconfigure,
-                                    read_consistency_level=read_consistency_level,
-                                    write_consistency_level=write_consistency_level,
-                                    num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads,
-                                    should_compact=should_compact,
-                                    num_update_operations_prior_to=num_update_operations_prior_to)
+                result = run_experiment(pf,
+                                        hosts=pf.get_hosts(),
+                                        overall_target_throughput=target_throughput,
+                                        total_num_records=total_num_records,
+                                        workload_type=workload_type,
+                                        replication_factor=replication_factor,
+                                        num_cassandra_nodes=num_cassandra_nodes,
+                                        num_ycsb_nodes=num_ycsb_nodes,
+                                        total_num_ycsb_threads=total_num_ycsb_threads,
+                                        workload_proportions=workload_proportions,
+                                        measurement_type=measurement_type,
+                                        should_inject_operations=False,
+                                        should_reconfigure=should_reconfigure,
+                                        read_consistency_level=read_consistency_level,
+                                        write_consistency_level=write_consistency_level,
+                                        num_morphus_mutation_sender_threads=num_morphus_mutation_sender_threads,
+                                        should_compact=should_compact,
+                                        num_pre_reconfig_ops_prior_to=num_pre_reconfig_ops_prior_to,
+                                        pre_reconfig_workload_proportions=pre_reconfig_workload_proportions,
+                                        commitlog_total_space_in_mb=commitlog_total_space_in_mb,
+                                        max_execution_time=max_execution_time_in_sec)
 
 
 def experiment_on_num_morphus_mutation_sender_threads(pf, repeat):
@@ -697,7 +719,9 @@ def main():
 
         # experiment_on_failure(pf, repeat)
 
-        experiment_on_num_morphus_mutation_sender_threads(pf, repeat)
+        # experiment_on_num_morphus_mutation_sender_threads(pf, repeat)
+
+        experiment_on_precompaction(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))

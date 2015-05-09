@@ -26,6 +26,10 @@ case $i in
     SEED_HOST="${i#*=}"
     shift
     ;;
+    --commit_log_total_space_in_mb=*)
+    COMMIT_LOG_TOTAL_SPACE_IN_MB="${i#*=}"
+    shift
+    ;;
     *)
             # unknown option
     ;;
@@ -77,6 +81,7 @@ bash -c "cat > ${CASSANDRA_HOME}/cassandra/conf/cassandra.yaml" <<-EOF
     commitlog_sync: periodic
     commitlog_sync_period_in_ms: 10000
     commitlog_segment_size_in_mb: 32
+    commitlog_total_space_in_mb: ${COMMIT_LOG_TOTAL_SPACE_IN_MB}
     seed_provider:
       - class_name: org.apache.cassandra.locator.SimpleSeedProvider
         parameters:

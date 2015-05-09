@@ -159,7 +159,7 @@ for dir_name in os.listdir(raw_data_root):
                 df = ycsb_parser.parse_timeseries(f_buf, rw)
                 # print cur_dir_path, fname, rw, df.describe()
                 if not should_reconfigure:
-                    abs_morphus_start_at = df['0time'].iloc[0] + 10000
+                    abs_morphus_start_at = df['0time'].iloc[0] + 30000
                 df['0time'] -= abs_morphus_start_at
                 df['1latency'] = df['1latency'].apply(lambda x: -1000000 if x < 0 else x)
 
@@ -271,6 +271,10 @@ os.system('./plot-read-latency-cdf.sh --output_path=%s '
           '--readonly=%s --uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
           (output_path, readonly_paths[0], uniform_paths[0], latest_paths[0], zipfian_paths[0], noreconfig_paths[0]))
 
+# os.system('./plot-read-latency-cdf.sh --output_path=%s '
+#           '--readonly=%s --uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
+#           (output_path, uniform_paths[0], uniform_paths[0], uniform_paths[0], uniform_paths[0], uniform_paths[0]))
+
 
 # Plot Update CDF
 paths = filter(lambda x: re.search('.*histogram\-update\-.*\.csv', x) is not None,
@@ -285,3 +289,7 @@ output_path = '%s/update-latency-cdf.png' % output_dir_path
 os.system('./plot-update-latency-cdf.sh --output_path=%s '
           '--uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
           (output_path, uniform_paths[0], latest_paths[0], zipfian_paths[0], noreconfig_paths[0]))
+
+# os.system('./plot-update-latency-cdf.sh --output_path=%s '
+#           '--uniform=%s --latest=%s --zipfian=%s --noreconfig=%s' %
+#           (output_path, uniform_paths[0], uniform_paths[0], uniform_paths[0], uniform_paths[0]))

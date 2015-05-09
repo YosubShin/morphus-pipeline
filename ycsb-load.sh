@@ -70,8 +70,20 @@ case $i in
     WRITE_CONSISTENCY_LEVEL="${i#*=}"
     shift
     ;;
-    --num_update_operations_prior_to=*)
-    NUM_UPDATE_OPERATIONS_PRIOR_TO="${i#*=}"
+    --num_pre_reconfig_ops_prior_to=*)
+    NUM_PRE_RECONFIG_OPS_PRIOR_TO="${i#*=}"
+    shift
+    ;;
+    --pre_reconfig_read_proportion=*)
+    PRE_RECONFIG_READ_PROPORTION="${i#*=}"
+    shift
+    ;;
+    --pre_reconfig_insert_proportion=*)
+    PRE_RECONFIG_INSERT_PROPORTION="${i#*=}"
+    shift
+    ;;
+    --pre_reconfig_update_proportion=*)
+    PRE_RECONFIG_UPDATE_PROPORTION="${i#*=}"
     shift
     ;;
     *)
@@ -178,20 +190,20 @@ EOF
 # Load YCSB Workload
 ${YCSB_PATH}/bin/ycsb load cassandra-cql -s -P ${BASE_PATH}/workload.txt -p maxexecutiontime=2000 -p cassandra.writeconsistencylevel=ONE > ${BASE_PATH}/load-output.txt
 
-if [ "${NUM_UPDATE_OPERATIONS_PRIOR_TO}" -gt "0" ]; then
+if [ "${NUM_PRE_RECONFIG_OPS_PRIOR_TO}" -gt "0" ]; then
 cat > ${BASE_PATH}/workload-preexecution.txt <<EOF
 recordcount=${NUM_RECORDS}
 
-operationcount=${NUM_UPDATE_OPERATIONS_PRIOR_TO}
+operationcount=${NUM_PRE_RECONFIG_OPS_PRIOR_TO}
 maxexecutiontime=${MAX_EXECUTION_TIME}
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
 readallfields=true
 
-readproportion=0
-updateproportion=1
+readproportion=${PRE_RECONFIG_READ_PROPORTION}
+updateproportion=${PRE_RECONFIG_UPDATE_PROPORTION}
 scanproportion=0
-insertproportion=0
+insertproportion=${PRE_RECONFIG_INSERT_PROPORTION}
 
 requestdistribution=uniform
 
@@ -208,7 +220,9 @@ cassandra.writeconsistencylevel=ONE
 
 EOF
 
-echo "Executing updates before running reconfiguration. Num update operations=${NUM_UPDATE_OPERATIONS_PRIOR_TO}"
+echo "Executing updates before running reconfiguration. Num update operations=${NUM_PRE_RECONFIG_OPS_PRIOR_TO}"
+
+${CASSANDRA_PATH}/bin/nodetool -h ${SEED_HOST} disableautocompaction -- ycsb usertable
 
 ${YCSB_PATH}/bin/ycsb run cassandra-cql -s -P ${BASE_PATH}/workload-preexecution.txt > ${BASE_PATH}/output-preexecution.txt
 

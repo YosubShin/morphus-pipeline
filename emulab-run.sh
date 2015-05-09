@@ -30,6 +30,6 @@ EOF
 sudo -u root bash <<EOF
 
 # Execute coordinator with emulab profile
-python /proj/ISS/shin14/cassandra-morphus/script/coordinator.py emulab 2>&1 | tee /tmp/morphus-cassandra-log.txt
+python coordinator.py emulab 2>&1 | tee /tmp/morphus-cassandra-log.txt
 
 EOF
