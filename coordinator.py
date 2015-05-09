@@ -633,13 +633,13 @@ def experiment_on_precompaction(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
     num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
-    total_num_records = 1000000
-    num_pre_reconfig_ops_prior_to = 20000000
+    total_num_records = 5000000
+    num_pre_reconfig_ops_prior_to = 50000000
     commitlog_total_space_in_mb = 32
     pre_reconfig_workload_proportions_list = []
 
     for i in range(10, 11, 2):
-        pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 200 * (10 - i) + 1000))
+        pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 200 * (10 - i) + 1500))
 
     for run in range(repeat):
         for pre_reconfig_workload_proportions, max_execution_time_in_sec in pre_reconfig_workload_proportions_list:
