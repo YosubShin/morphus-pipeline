@@ -244,6 +244,21 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
     if ret != 0:
         raise Exception('Unable to finish YCSB script')
 
+    if num_pre_reconfig_ops_prior_to != 0:
+        for host in hosts[0:num_cassandra_nodes]:
+            ret = os.system('%s/bin/nodetool -h %s disableautocompaction -- ycsb usertable' %
+                            (cassandra_path, host))
+
+        ret = os.system('ssh %s \'sh %s/ycsb-pre-reconfig-execute.sh '
+                        '--ycsb_path=%s --base_path=%s --num_records=%d --hosts=%s --num_threads=%d '
+                        '--read_proportion=%d --insert_proportion=%d --update_proportion=%d --max_execution_time=%d '
+                        '--random_salt=%d --num_pre_reconfig_ops_prior_to=%d \''
+                        % (hosts[num_cassandra_nodes], src_path, ycsb_path, result_path, total_num_records,
+                           cassandra_nodes_hosts, num_ycsb_threads, pre_reconfig_workload_proportions['read'],
+                           pre_reconfig_workload_proportions['insert'], pre_reconfig_workload_proportions['update'],
+                           max_execution_time, random_salt, num_pre_reconfig_ops_prior_to))
+
+
     # Save configuration files for this experiment
     meta = ConfigParser.ConfigParser()
     meta.add_section('config')
@@ -618,17 +633,16 @@ def experiment_on_precompaction(pf, repeat):
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
     num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
-    total_num_records = 1000000
+    total_num_records = 2000000
     num_pre_reconfig_ops_prior_to = 10000000
-    commitlog_total_space_in_mb = 128
-    max_execution_time_in_sec = 600
+    commitlog_total_space_in_mb = 64
     pre_reconfig_workload_proportions_list = []
 
-    for i in range(0, 11, 2):
-        pre_reconfig_workload_proportions_list.append({'read': 0, 'update': i, 'insert': (10 - i)})
+    for i in range(10, 11, 2):
+        pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 200 * (10 - i) + 1000))
 
     for run in range(repeat):
-        for pre_reconfig_workload_proportions in pre_reconfig_workload_proportions_list:
+        for pre_reconfig_workload_proportions, max_execution_time_in_sec in pre_reconfig_workload_proportions_list:
             for should_compact in [True, False]:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
