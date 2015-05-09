@@ -623,7 +623,8 @@ def experiment_on_precompaction(pf, repeat):
     commitlog_total_space_in_mb = 128
     max_execution_time_in_sec = 600
     pre_reconfig_workload_proportions_list = []
-    for i in range(0, 11, 2.5):
+
+    for i in range(0, 11, 2):
         pre_reconfig_workload_proportions_list.append({'read': 0, 'update': i, 'insert': (10 - i)})
 
     for run in range(repeat):
