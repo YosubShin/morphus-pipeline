@@ -280,6 +280,7 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         meta.set('config', 'fail_at', abs_fail_at)
         failed_host = hosts[random.randint(1, num_cassandra_nodes - 1)]
         meta.set('config', 'failed_host', failed_host)
+    meta.set('config', 'commitlog_total_space_in_mb', commitlog_total_space_in_mb)
 
     threads = []
     output = []
