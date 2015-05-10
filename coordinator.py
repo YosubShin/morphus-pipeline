@@ -638,7 +638,7 @@ def experiment_on_precompaction(pf, repeat):
     commitlog_total_space_in_mb = 64
     pre_reconfig_workload_proportions_list = []
 
-    for i in range(10, 11, 2):
+    for i in range(0, 11, 2):
         pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 300 * (10 - i) + 500))
 
     for run in range(repeat):
