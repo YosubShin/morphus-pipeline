@@ -41,8 +41,8 @@ set xlabel "Operations Rate (ops/s)"
 set ylabel "Reconfiguration Time (secs)"
 set xtics nomirror
 set ytics nomirror
-set xrange[-50:1050]
-#set yrange[:200]
+set xrange[-50:1600]
+set yrange[:2800]
 
 set datafile separator ","
 

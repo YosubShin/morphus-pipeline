@@ -685,7 +685,7 @@ def experiment_on_num_morphus_mutation_sender_threads(pf, repeat):
     write_consistency_level = pf.config.get('experiment', 'default_write_consistency_level')
     measurement_type = pf.config.get('experiment', 'default_measurement_type')
     should_reconfigure = True
-    num_morphus_mutation_sendder_threads_list = [int(math.pow(2, x)) for x in range(2, 6)]
+    num_morphus_mutation_sendder_threads_list = [int(math.pow(2, x)) for x in range(2, 9)]
 
     for run in range(repeat):
         for num_morphus_mutation_sender_threads in num_morphus_mutation_sendder_threads_list:
@@ -736,9 +736,9 @@ def main():
 
         # experiment_on_failure(pf, repeat)
 
-        # experiment_on_num_morphus_mutation_sender_threads(pf, repeat)
+        experiment_on_num_morphus_mutation_sender_threads(pf, repeat)
 
-        experiment_on_precompaction(pf, repeat)
+        # experiment_on_precompaction(pf, repeat)
 
         # Copy log to result directory
         os.system('cp %s/morphus-cassandra-log.txt %s/' % (pf.get_log_path(), result_base_path))
