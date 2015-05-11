@@ -216,8 +216,8 @@ def run_experiment(pf, hosts, overall_target_throughput, workload_type, total_nu
         if replication_factor != default_replication_factor:
             max_execution_time *= 1.0 * replication_factor / default_replication_factor
         if overall_target_throughput is not None:
-            # max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
-            max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
+            max_execution_time *= 1.0 * math.log(2 * overall_target_throughput / default_operations_rate, 2)
+            # max_execution_time *= 1.0 * overall_target_throughput / default_operations_rate
         if num_morphus_mutation_sender_threads <= default_num_morphus_mutation_sender_threads:
             max_execution_time *= 1.0 * default_num_morphus_mutation_sender_threads / num_morphus_mutation_sender_threads
 
@@ -547,7 +547,8 @@ def experiment_on_operations_rate(pf, repeat):
         (True, 100),
         (True, 300),
         (True, 700),
-        (True, 1000)
+        (True, 1000),
+        (True, 1500)
     ]
     workload_type = pf.config.get('experiment', 'default_workload_type')
     workload_proportions = {'read': 4, 'update': 4, 'insert': 2}
