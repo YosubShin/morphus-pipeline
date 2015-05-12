@@ -31,7 +31,7 @@ set boxwidth 0.5
 set style fill pattern border -1
 
 set key noinvert box
-set yrange [0:*]
+set yrange [0:700]
 
 set xlabel "Workload type"
 set ylabel "Reconfiguration time (sec)"

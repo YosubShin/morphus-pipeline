@@ -54,7 +54,7 @@ done
 gnuplot <<- EOF
 set terminal pngcairo font 'Times,20' linewidth 2 size 15in,9in 
 set style line 81 lt 0  # dashed
-set style line 81 lt rgb "#808080"  # grey
+set style line 81 lt rgb "#000040"  # light blue
 set grid back linestyle 81
 
 set datafile separator ","
@@ -64,7 +64,7 @@ set for [i=1:5] linetype i lt i
 set output "${OUTPUT_PATH}"
 set style line 1 lt 1 lc rgb "#A00000" lw 1
 set style line 2 lt 0 lc rgb "#0000A0" lw 1
-set ylabel "${TYPE} Latency (ms)"
+set ylabel "${TYPE} latency (ms)"
 set xlabel "Time"
 set xdata time
 set timefmt "%H:%M:%S"
@@ -85,5 +85,5 @@ set label 5 at graph ((20000.0 + ${CATCHUP_MORPHUS_TASK}) / (${CATCHUP_MORPHUS_T
 #unset key
 
 plot "${ORIGINAL}" using (\$1/1000):(\$2/10000) ls 1 title 'Original CF' with line, \
-	 "${ALTERED}" using (\$1/1000):(\$2/10000) ls 2 title 'Reconfigured CF' with line
+	 "${ALTERED}" using (\$1/1000):(\$2/10000) ls 81 title 'Reconfigured CF' with line
 EOF

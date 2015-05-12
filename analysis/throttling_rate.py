@@ -117,7 +117,7 @@ for dir_name in os.listdir(raw_data_root):
         num_threads = meta.getint('config', 'num_morphus_mutation_sender_threads')
         row_dict = {'num_threads': num_threads, 'reconfig_time': catchup_morphus_task / 1000}
 
-        percentiles = [0.05, 0.25, 0.5, 0.75, 0.95]
+        percentiles = [0.5, 0.95]
         for rw in rws:
             percentile_series = rw_histograms[rw]['1latency'].quantile(percentiles)
             for percentile in percentiles:
@@ -129,7 +129,7 @@ df = pd.DataFrame(rows)
 print df
 
 csv_path = '%s/throttle_rate.csv' % output_dir_path
-aggregated_df = df.groupby('num_threads', sort=True).mean()
+aggregated_df = df.groupby('num_threads', sort=True).agg(['mean', 'std'])
 print aggregated_df
 
 aggregated_df.to_csv(csv_path)
