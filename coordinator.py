@@ -635,15 +635,18 @@ def experiment_on_precompaction(pf, repeat):
     should_reconfigure = True
     num_morphus_mutation_sender_threads = int(pf.config.get('experiment', 'default_num_morphus_mutation_sender_threads'))
     total_num_records = 1000000
-    num_pre_reconfig_ops_prior_to = 5000000
-    commitlog_total_space_in_mb = 128
-    pre_reconfig_workload_proportions_list = []
+    # num_pre_reconfig_ops_prior_to = 5000000
 
-    for i in range(0, 11, 2):
-        pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 300 * (10 - i) + 500))
+    commitlog_total_space_in_mb = 128
+    # pre_reconfig_workload_proportions_list = []
+    # for i in range(0, 11, 2):
+    #     pre_reconfig_workload_proportions_list.append(({'read': 0, 'update': i, 'insert': (10 - i)}, 300 * (10 - i) + 500))
+
+    pre_reconfig_workload_proportions = {'read': 0, 'update': 1, 'insert': 0}
+    max_execution_time_in_sec = 600
 
     for run in range(repeat):
-        for pre_reconfig_workload_proportions, max_execution_time_in_sec in pre_reconfig_workload_proportions_list:
+        for num_pre_reconfig_ops_prior_to in range(0, 10000001, 2000000):
             for should_compact in [True, False]:
                 total_num_ycsb_threads = pf.get_max_num_connections_per_cassandra_node() * num_cassandra_nodes
                 num_ycsb_nodes = total_num_ycsb_threads / pf.get_max_allowed_num_ycsb_threads_per_node() + 1
